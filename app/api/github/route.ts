@@ -1,5 +1,16 @@
 import { NextResponse } from 'next/server';
 
+// 诊断口：只报告密钥是否存在及长度，不泄露任何内容
+export async function GET() {
+  const s = (process.env.GITALK_CLIENT_SECRET || '').trim();
+  return NextResponse.json({
+    hasSecret: s.length > 0,
+    secretLength: s.length,
+    looksHex40: /^[0-9a-f]{40}$/.test(s),
+    startsWithOv23: s.startsWith('Ov23'), // 若为 true 说明误填了 Client ID
+  });
+}
+
 export async function POST(req: Request) {
   try {
     // 1. 读取 Gitalk 发过来的数据（JSON: { code, client_id, client_secret, redirect_uri? }）
