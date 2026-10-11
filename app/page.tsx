@@ -9,6 +9,7 @@ import SearchBar from '../components/SearchBar';
 import { siteConfig } from '../siteConfig';
 import CloudPlayer from '../components/CloudPlayer';
 import ThemeToggleBlock from '../components/ThemeToggleBlock';
+import WeatherWidget from '../components/WeatherWidget';
 import ProfileCard from '../components/ProfileCard';
 import SiteDashboard from '../components/SiteDashboard';
 import { albums } from '../data/albums';
@@ -135,11 +136,14 @@ export default function Home() {
                     </div>
                   </Link>
 
-                  {/* 底层网格：说说轮播 + 主题切换器 */}
-                  {/* 手机上单列，平板上分3列比例分布 */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full flex-1">
+                  {/* 底层网格：说说轮播 + 天气 + 主题切换器 */}
+                  {/* 手机上单列，平板上分4列比例分布 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 w-full flex-1">
                     <div className="sm:col-span-2 flex flex-col min-h-[200px]">
                       <LatestChatterCarousel chatters={top5Chatters} />
+                    </div>
+                    <div className="sm:col-span-1 flex flex-col min-h-[120px]">
+                      <WeatherWidget />
                     </div>
                     <div className="sm:col-span-1 flex flex-col min-h-[120px]">
                       <ThemeToggleBlock />
