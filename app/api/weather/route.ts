@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 // 🌟 专属 API Host 通过 QWEATHER_HOST 配置(新账号必需,控制台-设置页获取)
 export async function GET() {
   const token = (process.env.QWEATHER_KEY || '').trim();
-  const locationId = "101010100"; // 北京
+  const locationId = "101281601"; // 广东 东莞
 
   if (!token) {
     console.error("❌ 环境变量 QWEATHER_KEY 未找到");

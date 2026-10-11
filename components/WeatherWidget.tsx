@@ -17,7 +17,7 @@ export default function WeatherWidget() {
         // 🌟 按照和风 V7 文档结构解析：数据在 data.now 中
         if (data.code === "200" && data.now) {
           setWeather({
-            city: "北京市",
+            city: "东莞市",
             temp: parseInt(data.now.temp),
             text: data.now.text,
             icon: data.now.icon,
@@ -28,7 +28,7 @@ export default function WeatherWidget() {
         }
       } catch (err) {
         // 报错时开启赛博模拟模式
-        setWeather({ city: "北京市", temp: 22, text: "气候模拟", icon: "101", isMock: true });
+        setWeather({ city: "东莞市", temp: 22, text: "气候模拟", icon: "101", isMock: true });
       } finally {
         setLoading(false);
       }
