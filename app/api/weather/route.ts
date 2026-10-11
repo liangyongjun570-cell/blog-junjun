@@ -1,18 +1,25 @@
 // app/api/weather/route.ts
 import { NextResponse } from 'next/server';
 
+// 🌟 和风天气认证方式自动识别:
+//    - QWEATHER_KEY 为 JWT(eyJ 开头)→ Authorization: Bearer
+//    - QWEATHER_KEY 为 API Key(32 位十六进制等)→ X-QW-Api-Key(和风 2024+ 控制台默认创建的类型)
+// 🌟 专属 API Host 通过 QWEATHER_HOST 配置(新账号必需,控制台-设置页获取)
 export async function GET() {
-  const token = process.env.QWEATHER_KEY;
+  const token = (process.env.QWEATHER_KEY || '').trim();
   const locationId = "101010100"; // 北京
 
   if (!token) {
-    console.error("❌ 环境变量 QWEATHER_KEY (Token) 未找到");
+    console.error("❌ 环境变量 QWEATHER_KEY 未找到");
     return NextResponse.json({ code: "500", message: "Token missing" }, { status: 500 });
   }
 
-  // 🌟 优先使用账号专属 API Host（和风天气 2024+ 新账号在控制台分配，形如 abc123.re.qweatherapi.com）
-  // 通过环境变量 QWEATHER_HOST 配置；未配置时回退到公共域名
-  const customHost = (process.env.QWEATHER_HOST || '').trim().replace(/\/+$/, '');
+  const isJwt = token.startsWith('eyJ');
+  const authHeaders: Record<string, string> = isJwt
+    ? { 'Authorization': `Bearer ${token}` }
+    : { 'X-QW-Api-Key': token };
+
+  const customHost = (process.env.QWEATHER_HOST || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
   const apiHosts = [
     ...(customHost ? [`https://${customHost}/v7/weather/now`] : []),
     'https://api.qweather.com/v7/weather/now',
@@ -22,13 +29,10 @@ export async function GET() {
   for (const host of apiHosts) {
     try {
       const url = `${host}?location=${locationId}`;
-      console.log(`📡 尝试使用 Bearer 认证请求: ${host}`);
-
       const res = await fetch(url, {
         method: 'GET',
         headers: {
-          // 🌟 按照文档要求的 Header 认证格式
-          'Authorization': `Bearer ${token}`,
+          ...authHeaders,
           'Accept-Encoding': 'gzip',
           'User-Agent': 'Vercel-Weather-Proxy/1.0'
         },
@@ -37,13 +41,11 @@ export async function GET() {
 
       const data = await res.json();
 
-      // 如果返回 200，说明这套 Bearer 认证终于对上暗号了！
       if (data.code === "200" || res.status === 200) {
-        console.log(`✅ 认证通过! 来源: ${host}`);
         return NextResponse.json(data);
       }
 
-      console.warn(`⚠️ ${host} 认证未通过:`, data);
+      console.warn(`⚠️ ${host} 未通过:`, data);
 
     } catch (err: any) {
       console.error(`🔥 请求 ${host} 出错:`, err.message);
@@ -53,6 +55,6 @@ export async function GET() {
 
   return NextResponse.json({
     code: "500",
-    message: "认证协议对接失败，请检查是否在 Vercel 填写了正确的 Token"
+    message: "认证失败，请检查 QWEATHER_KEY / QWEATHER_HOST 配置"
   }, { status: 500 });
 }
