@@ -48,7 +48,7 @@ export const siteConfig = {
   // 👇 【新增】：全局背景弹幕配置
   danmakuList: ["今天梯形图画了吗？", "PLC 一上电，灵感就来了", "这个点位是谁接的？", "24V 还是 0V，这是个问题", "今天也在调设备", "又报警了，打咩", "周末厂修，勿念", "设备一响，黄金万两", "写代码中，勿扰", "接线之前，先断电"],
   gitalkConfig: {
-    clientID: "",
+    clientID: "Ov23litHjfcEc1F3fhNp",
     clientSecret: "", // 留空：由 /api/github 代理从服务端环境变量 GITALK_CLIENT_SECRET 注入，不进代码仓库
     repo: "blog-junjun",
     owner: "liangyongjun570-cell",
