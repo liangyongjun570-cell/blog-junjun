@@ -10,9 +10,11 @@ export async function GET() {
     return NextResponse.json({ code: "500", message: "Token missing" }, { status: 500 });
   }
 
-  // 🌟 核心：按照你提供的文档，尝试两个可能的 Host
-  // 如果你有特定的 API Host（例如 xxx.qweather.com），请把第一个换成它
+  // 🌟 优先使用账号专属 API Host（和风天气 2024+ 新账号在控制台分配，形如 abc123.re.qweatherapi.com）
+  // 通过环境变量 QWEATHER_HOST 配置；未配置时回退到公共域名
+  const customHost = (process.env.QWEATHER_HOST || '').trim().replace(/\/+$/, '');
   const apiHosts = [
+    ...(customHost ? [`https://${customHost}/v7/weather/now`] : []),
     'https://api.qweather.com/v7/weather/now',
     'https://devapi.qweather.com/v7/weather/now'
   ];
