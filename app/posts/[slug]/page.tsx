@@ -23,6 +23,9 @@ import ClientTOC from '../../../components/ClientTOC';
 import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
 import SidebarLyric from '../../../components/SidebarLyric';
+import ArticleFooter from '../../../components/ArticleFooter';
+import ArticleAuthorCard from '../../../components/ArticleAuthorCard';
+import PostViews from '../../../components/PostViews';
 
 export async function generateStaticParams() {
   const postsDirectory = path.join(process.cwd(), 'posts');
@@ -100,11 +103,23 @@ async function getPostData(slug: string) {
     .use(rehypeStringify, { allowDangerousHtml: true })
     .process(content);
 
+  // 🌟 标题净化：扒掉标题末尾误入的 <br>/&nbsp;/空白，
+  // 否则 h2 荧光笔色块（按盒子底部 38% 绘制）会悬空到空行上，变成一块脱节的紫斑
+  let contentHtml = processedContent.toString();
+  contentHtml = contentHtml.replace(/(<h[1-6][^>]*>)([\s\S]*?)((?:<br\s*\/?>|&nbsp;|\s)+)(<\/h[1-6]>)/gi, '$1$2$4');
+
+  // 🌟 图片排版：把连续的图片（段落里只有图、或顶层 img）合并成图片行——两张 50% 刚好并排一行
+  // ① 先把"只装了图片的段落"拆壳，露出 img
+  contentHtml = contentHtml.replace(/<p[^>]*>\s*((?:<img[^>]*>\s*)+)<\/p>/gi, '$1');
+  // ② 再把连续出现的 img 兄弟包进弹性行容器
+  contentHtml = contentHtml.replace(/(?:<img[^>]*>\s*){2,}/gi, (m) => `<div class="img-row">${m.trim()}</div>`);
+
   return {
     slug,
-    contentHtml: processedContent.toString(),
+    contentHtml,
     toc: extractToc(content),
     title: data.title,
+    description: data.description || '',
     date: data.date,
     tags: data.tags && Array.isArray(data.tags) ? data.tags : [],
     cover: data.cover || siteConfig.defaultPostCover
@@ -124,50 +139,116 @@ function getRecentPosts(currentSlug: string) {
   }).filter(p => p.slug !== currentSlug).slice(0, 3);
 }
 
+/* 按时间倒序排列全部文章，计算上一篇（更早）/ 下一篇（更新）与总数 */
+function getNeighbors(currentSlug: string) {
+  const postsDirectory = path.join(process.cwd(), 'posts');
+  let all: { slug: string; title: string; t: number }[] = [];
+  try {
+    all = fs.readdirSync(postsDirectory).filter(f => f.endsWith('.md')).map(f => {
+      const { data } = matter(fs.readFileSync(path.join(postsDirectory, f), 'utf8'));
+      const t = new Date(data.date || '1970-01-01').getTime() || 0;
+      return { slug: f.replace(/\.md$/, ''), title: data.title || '无标题', t };
+    }).sort((a, b) => b.t - a.t || b.slug.localeCompare(a.slug));
+  } catch (e) {}
+  const idx = all.findIndex(p => p.slug === currentSlug);
+  return {
+    postsCount: all.length,
+    index: idx >= 0 ? idx + 1 : all.length,
+    prev: idx >= 0 && idx + 1 < all.length ? { slug: all[idx + 1].slug, title: all[idx + 1].title } : null,
+    next: idx > 0 ? { slug: all[idx - 1].slug, title: all[idx - 1].title } : null,
+  };
+}
+
 export default async function Post({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   const postData = await getPostData(resolvedParams.slug);
   const recentPosts = getRecentPosts(resolvedParams.slug);
+  const { postsCount, index: postIndex, prev, next } = getNeighbors(resolvedParams.slug);
+
+  // 预计阅读时长：按正文非空白字符数 / 400字每分钟估算
+  const plainLen = postData.contentHtml.replace(/<[^>]+>/g, '').replace(/\s/g, '').length;
+  const readMins = Math.max(1, Math.ceil(plainLen / 400));
 
   return (
     <div className="min-h-screen relative pb-20">
       <Navbar />
       <PageTransition>
-        <main className="w-[95%] md:w-[90%] max-w-6xl mx-auto mt-24 md:mt-28 flex flex-col lg:flex-row gap-6 md:gap-8 relative z-10">
 
-          <article className="flex-1 bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 dark:border-white/10 overflow-hidden transition-colors duration-700">
-            <div className="w-full aspect-video bg-slate-200 dark:bg-slate-700 relative group">
-              <img src={postData.cover} alt="封面" className="w-full h-full object-cover opacity-90 transition-transform duration-1000 group-hover:scale-105" />
+        {/* 🌸 大封面横幅：超大标题压图 + 副标题 + 作者信息行 + 分类标签 */}
+        <div className="w-[95%] md:w-[90%] max-w-6xl mx-auto mt-24 md:mt-28 relative z-10">
+          <div className="relative h-[300px] sm:h-[360px] md:h-[420px] rounded-3xl overflow-hidden shadow-2xl border border-white/20 dark:border-white/10 group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={postData.cover} alt="封面" className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/5" />
+
+            <div className="absolute top-4 left-4 z-10"><BackButton /></div>
+
+            {/* 衬线编号水印（呼应首页杂志编号美学） */}
+            <div className="absolute top-3 right-6 text-right select-none pointer-events-none" aria-hidden>
+              <p className="text-[10px] font-bold tracking-[0.4em] text-white/40 uppercase drop-shadow">Article</p>
+              <p className="font-serif italic font-black text-6xl md:text-8xl leading-none text-white/20 group-hover:text-pink-300/35 transition-colors duration-700 drop-shadow">
+                {String(Math.max(postIndex, 1)).padStart(2, '0')}
+              </p>
             </div>
 
-            <div className="p-5 md:p-12 relative">
-              <BackButton />
+            <div className="absolute bottom-0 left-0 right-0 p-5 md:p-10">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl xl:text-6xl font-black text-white leading-tight tracking-tight drop-shadow-[0_4px_18px_rgba(0,0,0,0.65)] max-w-[85%]">
+                {postData.title}
+              </h1>
+              {postData.description && (
+                <p className="mt-2 md:mt-3 text-pink-300 italic font-black text-sm sm:text-lg md:text-2xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] max-w-[85%]">
+                  {postData.description}
+                </p>
+              )}
 
-              <header className="mb-6 md:mb-8 border-b border-slate-300/50 dark:border-slate-700 pb-5 md:pb-6 relative">
-                <h1 className="text-2xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight transition-colors duration-700 pr-16 md:pr-24 leading-snug">
-                  {postData.title}
-                </h1>
+              {/* 信息行：毛玻璃胶囊（含预计阅读时长） */}
+              <div className="mt-4 md:mt-5 inline-flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-full bg-black/35 backdrop-blur-md border border-white/20 px-4 md:px-5 py-2 md:py-2.5 text-white/90 text-xs md:text-sm shadow-lg">
+                <span className="flex items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={siteConfig.avatarUrl} alt="作者" className="w-6 h-6 md:w-7 md:h-7 rounded-full object-cover ring-2 ring-pink-300/60 shadow" />
+                  <span className="font-bold drop-shadow">{siteConfig.authorName}</span>
+                </span>
+                <span className="w-px h-3.5 bg-white/25" aria-hidden />
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" /></svg>
+                  {postData.date}
+                </span>
+                <span className="w-px h-3.5 bg-white/25" aria-hidden />
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  <PostViews slug={resolvedParams.slug} />
+                </span>
+                <span className="w-px h-3.5 bg-white/25" aria-hidden />
+                <span className="flex items-center gap-1.5 text-pink-300 font-bold">
+                  <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" /></svg>
+                  约 {readMins} 分钟
+                </span>
+              </div>
+            </div>
 
-                {/* ✅ 前端展示：修改此篇的特权按钮已经彻底移除 */}
-
-                <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                  <div className="flex items-center gap-1.5 md:gap-2 text-indigo-700 dark:text-indigo-400 font-bold bg-white/30 dark:bg-slate-900/50 px-3 md:px-4 py-1.5 md:py-2 rounded-full w-max text-xs md:text-sm transition-colors duration-700 shadow-sm border border-white/20 dark:border-white/5">
-                    <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    写作时间：{postData.date}
-                  </div>
-
-                  {postData.tags.map((tag: string) => (
-                    <div key={tag} className="flex items-center gap-1 text-pink-600 dark:text-pink-400 font-bold bg-white/30 dark:bg-slate-900/50 px-2.5 md:px-3 py-1.5 md:py-2 rounded-full text-xs md:text-sm transition-colors duration-700 shadow-sm border border-white/20 dark:border-white/5">
-                      <span className="text-[10px] md:text-xs opacity-70">#</span> {tag}
-                    </div>
-                  ))}
+            {/* 分类贴纸：歪贴 + 胶带（呼应拍立得墙） */}
+            {postData.tags.length > 0 && (
+              <div className="absolute bottom-5 right-5 md:bottom-9 md:right-9 rotate-[-5deg] hover:rotate-0 hover:scale-110 transition-transform duration-300">
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-pink-200/60 -rotate-6 rounded-sm shadow-sm" aria-hidden />
+                <div className="relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-br from-pink-400 to-fuchsia-400 text-white text-xs md:text-sm font-black shadow-lg shadow-pink-500/40">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 md:w-4 md:h-4"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+                  {postData.tags[0]}
                 </div>
-              </header>
+              </div>
+            )}
+          </div>
+        </div>
 
+        <main className="w-[95%] md:w-[90%] max-w-6xl mx-auto mt-6 md:mt-8 flex flex-col lg:flex-row gap-6 md:gap-8 relative z-10">
+
+          <article className="flex-1 bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 dark:border-white/10 overflow-hidden transition-colors duration-700">
+
+            <div className="p-5 md:p-12 relative">
               <div className="relative">
                 <style>{`
                   .prose h1 { font-size: 1.8rem !important; font-weight: 900 !important; margin-bottom: 1.2rem !important; margin-top: 2rem !important; line-height: 1.3 !important; color: inherit !important; }
-                  .prose h2 { font-size: 1.5rem !important; font-weight: 800 !important; margin-bottom: 1rem !important; margin-top: 1.5rem !important; color: inherit !important; }
+                  .prose h2 { font-size: 1.5rem !important; font-weight: 800 !important; margin-bottom: 1rem !important; margin-top: 1.5rem !important; color: inherit !important; width: fit-content !important; padding: 0 0.35rem 0.1rem !important; border-radius: 0.35rem !important; background: linear-gradient(transparent 62%, rgba(249, 168, 212, 0.38) 62%) !important; }
+                  .prose h2::before { content: '\\2726'; color: #f472b6; margin-right: 0.45rem; font-size: 0.8em; }
                   .prose h3 { font-size: 1.2rem !important; font-weight: 700 !important; margin-bottom: 0.8rem !important; color: inherit !important; }
                   .prose p { font-size: 0.95rem !important; line-height: 1.75 !important; color: inherit !important; }
                   
@@ -228,6 +309,16 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
                   .dark .prose p code, .dark .prose li code { background-color: rgba(99, 102, 241, 0.2) !important; color: #818cf8 !important; }
                   .prose img { display: block !important; margin: 1.5rem auto !important; border-radius: 1rem !important; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important; max-width: 100% !important; height: auto !important; }
 
+                  /* 🌟 图片行：连续图片并排（两张 50% 刚好一行，多张自动换行） */
+                  .prose .img-row { display: flex !important; flex-wrap: wrap; gap: 1rem; justify-content: center; align-items: flex-start; margin: 2rem 0 !important; }
+                  .prose .img-row img { margin: 0 !important; }
+                  .prose .img-row:has(img:nth-child(2)) img { width: calc(50% - 0.5rem) !important; }
+                  /* 编辑器里手动设过宽度的图优先：100% 独占一行、25% 可四张一行 */
+                  .prose .img-row:has(img:nth-child(2)) img[data-w="25%"] { width: 25% !important; }
+                  .prose .img-row:has(img:nth-child(2)) img[data-w="50%"] { width: calc(50% - 0.5rem) !important; }
+                  .prose .img-row:has(img:nth-child(2)) img[data-w="75%"] { width: 75% !important; }
+                  .prose .img-row:has(img:nth-child(2)) img[data-w="100%"] { width: 100% !important; }
+
                   .prose pre code .hljs-comment, .prose pre code .hljs-quote { color: #5c6370 !important; font-style: italic !important; }
                   .prose pre code .hljs-doctag, .prose pre code .hljs-keyword, .prose pre code .hljs-formula { color: #c678dd !important; }
                   .prose pre code .hljs-keyword.type_, .prose pre code .hljs-type { color: #c678dd !important; } 
@@ -241,6 +332,7 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
                   @media (min-width: 768px) {
                     .prose h1 { font-size: 3rem !important; font-weight: 950 !important; margin-bottom: 2rem !important; margin-top: 3rem !important; line-height: 1.1 !important; }
                     .prose h2 { font-size: 2.2rem !important; margin-bottom: 1.5rem !important; margin-top: 2rem !important; }
+                    .prose h2::before { font-size: 0.75em; }
                     .prose h3 { font-size: 1.5rem !important; margin-bottom: 1rem !important; }
                     .prose p { font-size: 1.15rem !important; line-height: 1.85 !important; }
                     
@@ -260,7 +352,15 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
                 />
               </div>
 
-              <div className="mt-12 md:mt-16">
+              <ArticleFooter
+                slug={resolvedParams.slug}
+                title={postData.title || ''}
+                tags={postData.tags}
+                prev={prev}
+                next={next}
+              />
+
+              <div className="mt-8">
                 <Comments />
               </div>
 
@@ -268,32 +368,29 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
           </article>
 
           <aside className="w-full lg:w-[320px] flex flex-col gap-6 flex-shrink-0">
-            <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-3xl p-6 border border-white/40 dark:border-white/10 shadow-xl text-center">
-              <div className="w-20 h-20 mx-auto rounded-full p-1 bg-gradient-to-tr from-indigo-500 to-purple-500 shadow-md mb-4 transition-transform duration-500 hover:rotate-3">
-                <img src={siteConfig.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover bg-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{siteConfig.authorName}</h3>
-              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium mb-4">{siteConfig.bio}</p>
-              <ClientSocials />
-            </div>
-
-            <SidebarLyric />
-
-            <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-3xl p-6 border border-white/40 dark:border-white/10 shadow-xl">
-              <h3 className="font-black text-slate-900 dark:text-white mb-4 border-l-4 border-indigo-500 pl-2 text-sm">RECOMMENDED</h3>
-              <div className="space-y-4">
-                {recentPosts.map(p => (
-                  <Link key={p.slug} href={`/posts/${p.slug}`} className="group block">
-                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">{p.title}</h4>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-bold uppercase">{p.date}</p>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
             {postData.toc.length > 0 && (
               <ClientTOC toc={postData.toc} />
             )}
+
+            <ArticleAuthorCard postsCount={postsCount} />
+
+            <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-3xl p-6 border border-white/40 dark:border-white/10 shadow-xl">
+              <h3 className="flex items-center gap-1.5 font-black text-slate-900 dark:text-white mb-4 text-sm tracking-wider">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-pink-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                相关推荐
+              </h3>
+              <div className="space-y-3">
+                {recentPosts.map(p => (
+                  <Link key={p.slug} href={`/posts/${p.slug}`} className="group flex items-start gap-2">
+                    <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-pink-400/70 flex-shrink-0 group-hover:bg-pink-400 transition-colors" />
+                    <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-pink-500 dark:group-hover:text-pink-300 transition-colors line-clamp-1 leading-5">{p.title}</h4>
+                  </Link>
+                ))}
+                {recentPosts.length === 0 && <p className="text-xs text-slate-400">暂无更多文章</p>}
+              </div>
+            </div>
+
+            <SidebarLyric />
           </aside>
         </main>
       </PageTransition>

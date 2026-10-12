@@ -41,6 +41,7 @@ const getDisplayText = (rawText: string) => {
 
 export default function ClientTOC({ toc }: { toc: TocItem[] }) {
   const [activeId, setActiveId] = useState<string>("");
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const contentDiv = document.getElementById('article-content');
@@ -60,15 +61,20 @@ export default function ClientTOC({ toc }: { toc: TocItem[] }) {
       const offset = 150;
 
       let currentActiveId = "";
+      let activeIndex = -1;
 
-      for (const heading of headings) {
-        const elementTop = heading.getBoundingClientRect().top + scrollY;
+      for (let i = 0; i < headings.length; i++) {
+        const elementTop = headings[i].getBoundingClientRect().top + scrollY;
         if (scrollY >= elementTop - offset) {
-          currentActiveId = heading.id;
+          currentActiveId = headings[i].id;
+          activeIndex = i;
         } else {
           break;
         }
       }
+
+      // 阅读进度 = 已过标题数 / 总标题数
+      setProgress(headings.length ? Math.round(((activeIndex + 1) / headings.length) * 100) : 0);
 
       if (currentActiveId) setActiveId(currentActiveId);
     };
@@ -122,9 +128,13 @@ export default function ClientTOC({ toc }: { toc: TocItem[] }) {
 
   return (
     <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-3xl p-6 border border-white/40 dark:border-white/10 shadow-xl sticky top-28 transition-colors duration-700 max-h-[75vh] overflow-y-auto custom-scrollbar">
-      <h3 className="font-black text-slate-900 dark:text-white mb-4 border-l-4 border-indigo-500 pl-2 text-sm uppercase tracking-widest">
-        Table of Contents
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="flex items-center gap-1.5 font-black text-slate-900 dark:text-white text-sm tracking-wider">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-pink-400"><path d="M4 6h16M4 12h10M4 18h14" strokeLinecap="round" /></svg>
+          文章目录
+        </h3>
+        <span className="text-xs font-black text-pink-400/80">{progress}%</span>
+      </div>
       <nav className="flex flex-col gap-2 relative">
         <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-slate-200 dark:bg-slate-700/50 rounded-full"></div>
 
@@ -140,17 +150,18 @@ export default function ClientTOC({ toc }: { toc: TocItem[] }) {
             <button
               key={index}
               onClick={(e) => scrollToHeading(e, safeId)}
-              className={`text-left text-sm transition-all duration-300 line-clamp-2 cursor-pointer relative pl-4
+              className={`text-left text-sm transition-all duration-300 line-clamp-2 cursor-pointer relative pl-4 flex gap-1.5
                 ${item.level === 1 ? 'font-bold mt-2' : ''}
                 ${item.level === 2 ? 'ml-2' : ''}
                 ${item.level === 3 ? 'ml-4 text-xs' : ''}
-                ${isActive ? 'text-indigo-600 dark:text-indigo-400 font-bold scale-105 origin-left' : 'text-slate-500 hover:text-indigo-500 dark:text-slate-400 dark:hover:text-indigo-400'}
+                ${isActive ? 'text-pink-500 dark:text-pink-300 font-bold scale-105 origin-left' : 'text-slate-500 hover:text-pink-400 dark:text-slate-400 dark:hover:text-pink-300'}
               `}
             >
               {isActive && (
-                <span className="absolute left-[-5px] top-[50%] -translate-y-[50%] w-[6px] h-[6px] rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></span>
+                <span className="absolute left-[-5px] top-[50%] -translate-y-[50%] w-[6px] h-[6px] rounded-full bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.8)]"></span>
               )}
-              {displayText}
+              <span className={`font-serif italic font-black flex-shrink-0 ${isActive ? 'text-pink-400' : 'text-slate-300 dark:text-white/15'}`}>{String(index + 1).padStart(2, '0')}</span>
+              <span className="min-w-0">{displayText}</span>
             </button>
           );
         })}
