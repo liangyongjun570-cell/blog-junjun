@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 
 export default function CyberCat() {
   const [isPetted, setIsPetted] = useState(false);
@@ -12,6 +12,30 @@ export default function CyberCat() {
 
   const chatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // --- 🐾 自由移动：位置记忆 + 屏幕内约束 ---
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const constraintsRef = useRef<HTMLDivElement>(null);
+  const dragMovedRef = useRef(false); // 区分「拖动」和「点击摸猫」，防止拖完误触发摸猫
+
+  // 挂载时恢复上次拖到的位置（localStorage 持久化）
+  useEffect(() => {
+    try {
+      const sx = localStorage.getItem('cybercat-pos-x');
+      const sy = localStorage.getItem('cybercat-pos-y');
+      if (sx !== null) x.set(parseFloat(sx));
+      if (sy !== null) y.set(parseFloat(sy));
+    } catch (e) { /* localStorage 不可用则忽略 */ }
+  }, [x, y]);
+
+  const handleDragEnd = () => {
+    // 拖动结束时记住位置，刷新页面后猫猫还在原地
+    try {
+      localStorage.setItem('cybercat-pos-x', String(x.get()));
+      localStorage.setItem('cybercat-pos-y', String(y.get()));
+    } catch (e) { /* ignore */ }
+  };
+
   // --- 💬 说话功能 ---
   const speak = (text: string, duration = 6000) => {
     setSpeech(text);
@@ -21,8 +45,12 @@ export default function CyberCat() {
     }, duration);
   };
 
-  // --- 🖱️ 交互事件：摸猫猫 ---
+  // --- 🖱️ 交互事件：摸猫猫（拖动后松手不会误触发） ---
   const handlePetCat = () => {
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false; // 刚才是拖拽，不算摸
+      return;
+    }
     if (isPetted) return;
     setIsPetted(true);
     speak("呼噜噜... 摸得本喵很舒服喵~", 2000);
@@ -108,13 +136,22 @@ export default function CyberCat() {
 
 
   return (
-    <motion.div
-      drag
-      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragElastic={0.1}
-      whileDrag={{ scale: 1.1, cursor: "grabbing" }}
-      className="fixed bottom-20 right-20 z-[9999] flex flex-col items-center group cursor-grab active:cursor-grabbing"
-    >
+    <>
+      {/* 🖥️ 全屏隐形约束层：只用来限定猫猫的拖动范围，不拦截任何点击 */}
+      <div ref={constraintsRef} className="fixed inset-0 z-[9998] pointer-events-none" aria-hidden="true" />
+      <motion.div
+        drag
+        dragConstraints={constraintsRef}
+        dragMomentum={false}
+        dragElastic={0}
+        whileDrag={{ scale: 1.1, cursor: "grabbing" }}
+        onDrag={(_, info) => {
+          if (Math.abs(info.offset.x) > 4 || Math.abs(info.offset.y) > 4) dragMovedRef.current = true;
+        }}
+        onDragEnd={handleDragEnd}
+        style={{ x, y }}
+        className="fixed bottom-20 right-20 z-[9999] flex flex-col items-center group cursor-grab active:cursor-grabbing touch-none"
+      >
       {/* 💬 聊天气泡 */}
       <div className="relative w-full flex justify-center mb-6">
         <AnimatePresence>
@@ -239,5 +276,6 @@ export default function CyberCat() {
         )}
       </AnimatePresence>
     </motion.div>
+    </>
   );
 }
