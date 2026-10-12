@@ -58,6 +58,9 @@ interface MusicContextType {
   setVolume: (value: number) => void;
   toggleMute: () => void;
   togglePlayMode: () => void;
+
+  // 🌟 频谱支持：返回 Web Audio 分析器（未就绪时返回 null）
+  getAnalyser: () => AnalyserNode | null;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -79,6 +82,41 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [playMode, setPlayMode] = useState<PlayMode>('loop');
 
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // 🌟 Web Audio 频谱：懒创建 AudioContext + AnalyserNode（仅在 CORS 安全的直链上启用）
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+
+  const isCorsSafeSrc = (src?: string) => !!src && !src.includes('music.163.com/song/media');
+
+  const ensureAnalyser = () => {
+    try {
+      if (!audioRef.current || !isCorsSafeSrc(audioRef.current.src)) return;
+      if (!audioCtxRef.current) {
+        const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        const source = ctx.createMediaElementSource(audioRef.current);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.8;
+        source.connect(analyser);
+        analyser.connect(ctx.destination);
+        audioCtxRef.current = ctx;
+        analyserRef.current = analyser;
+      }
+      audioCtxRef.current?.resume().catch(() => {});
+    } catch {
+      /* 频谱初始化失败不影响播放 */
+    }
+  };
+
+  const getAnalyser = () => analyserRef.current;
+
+  // 播放状态变化时确保分析器就绪（用户手势后 resume）
+  useEffect(() => {
+    if (isPlaying) ensureAnalyser();
+  }, [isPlaying]);
 
   useEffect(() => {
     let isMounted = true;
@@ -246,13 +284,16 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         playlist, currentIndex, currentSong, isPlaying, progress, currentTime, duration, currentLyric, isLoading,
         volume, isMuted, playMode, // 暴露新状态
         togglePlay, nextSong, prevSong, handleSeek,
-        playSong, setVolume, toggleMute, togglePlayMode // 暴露新方法
+        playSong, setVolume, toggleMute, togglePlayMode, // 暴露新方法
+        getAnalyser // 频谱分析器
     }}>
       {children}
       {currentSong && (
         <audio
           ref={audioRef}
           src={currentSong.src}
+          // 直链 CDN 带 CORS 头才开跨域，外链回退时不开（否则会加载失败）
+          crossOrigin={isCorsSafeSrc(currentSong.src) ? 'anonymous' : undefined}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded} // 使用我们重写的结束处理
           onLoadedMetadata={handleTimeUpdate}
