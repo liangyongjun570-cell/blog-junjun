@@ -14,6 +14,9 @@ import { ToastProvider } from '../components/ToastProvider';
 import HeroSection from '../components/HeroSection';
 import HomeShowcase, { NoteItem, EventItem, FragmentItem, AlbumCard } from '../components/HomeShowcase';
 
+// 每次请求都实时读取磁盘数据（文章/说说/相册），不缓存
+export const dynamic = 'force-dynamic';
+
 function toDate(raw: any): Date {
   try {
     const d = new Date(raw);
@@ -74,11 +77,12 @@ export default function Home() {
         const fullPath = path.join(chattersDirectory, fileName);
         const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
         const rawDate = data.date || '1970-01-01';
+        const contentImg = (content.match(/!\[[^\]]*\]\(([^)\s"']+)/) || [])[1] || '';
         return {
           slug: fileName.replace(/\.md$/, ''),
           title: data.title || '碎片记录',
-          description: data.description || content.substring(0, 60),
-          cover: data.cover || '/records-default.jpg',
+          description: data.description || content.replace(/!\[[^\]]*\]\([^)]*\)/g, '').substring(0, 60),
+          cover: data.cover || contentImg || '/records-default.jpg',
           date: rawDate,
           d: toDate(rawDate),
           formattedDate: formatUpdateTime(rawDate)
@@ -124,26 +128,48 @@ export default function Home() {
     };
   });
 
-  /* ---------------- 随想碎片 ---------------- */
-  const fragments: FragmentItem[] = [];
-  allChatters.forEach(c => {
-    const d = c.d;
-    fragments.push({
-      src: c.cover,
-      dateLabel: `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-      caption: c.title,
-    });
-  });
-  albums.forEach(a => {
-    (a.photos || []).forEach((ph: any) => {
-      const d = toDate(a.date);
-      fragments.push({
-        src: ph.url,
-        dateLabel: `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-        caption: ph.caption || a.title || '相册照片',
+  /* ---------------- 随想碎片（实时聚合：说说图片 + 碎碎念 + 相册照片，按时间倒序） ---------------- */
+  const fragPool: (FragmentItem & { t: number })[] = [];
+  const fmtMD = (d: Date) => `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  // ① 说说图片（posts/moments 与 moments 两个目录都扫）
+  const momentDirs = [path.join(process.cwd(), 'posts', 'moments'), path.join(process.cwd(), 'moments')];
+  momentDirs.forEach(dir => {
+    try {
+      if (!fs.existsSync(dir)) return;
+      fs.readdirSync(dir).filter(f => f.endsWith('.md')).forEach(fileName => {
+        try {
+          const { data, content } = matter(fs.readFileSync(path.join(dir, fileName), 'utf8'));
+          const d = toDate(data.date);
+          const caption = (content.replace(/!\[[^\]]*\]\([^)]*\)/g, '').trim().split('\n')[0] || '').substring(0, 24) || '说说瞬间';
+          let imgs: string[] = Array.isArray(data.images) ? data.images.filter(Boolean) : [];
+          if (imgs.length === 0) {
+            imgs = Array.from(content.matchAll(/!\[[^\]]*\]\(([^)\s"']+)/g)).map(m => m[1]).slice(0, 6);
+          }
+          imgs.forEach((img, i) => {
+            fragPool.push({ src: img, dateLabel: fmtMD(d), caption: imgs.length > 1 ? `${caption} ${i + 1}/${imgs.length}` : caption, t: d.getTime() });
+          });
+        } catch {}
       });
+    } catch {}
+  });
+
+  // ② 碎碎念（封面缺省时已回退正文首图）
+  allChatters.forEach(c => {
+    fragPool.push({ src: c.cover, dateLabel: fmtMD(c.d), caption: c.title, t: c.d.getTime() });
+  });
+
+  // ③ 相册照片
+  albums.forEach(a => {
+    const d = toDate(a.date);
+    (a.photos || []).forEach((ph: any) => {
+      fragPool.push({ src: ph.url, dateLabel: fmtMD(d), caption: ph.caption || a.title || '相册照片', t: d.getTime() });
     });
   });
+
+  // 按时间倒序，永远展示最新的内容
+  fragPool.sort((a, b) => b.t - a.t);
+  const fragments: FragmentItem[] = fragPool.slice(0, 12).map(({ t, ...f }) => f);
   // 数据不足时用文章配图补位，保证视觉效果
   const fallbackFrags: FragmentItem[] = [
     { src: '/images/blog-begin-cover.jpg', dateLabel: '', caption: '博客开端' },

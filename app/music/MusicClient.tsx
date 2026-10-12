@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, RefreshCcw, ListMusic, Mic2, Disc3, Volume2, VolumeX, Search, X, MessageSquare } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, RefreshCcw, ListMusic, Mic2, Disc3, Volume2, VolumeX, Search, X, MessageSquare, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import { useMusic } from '../../components/MusicProvider';
@@ -14,6 +14,7 @@ export default function MusicClient() {
     isLoading, togglePlay, nextSong, prevSong, handleSeek,
     playSong, selectSong,
     playMode, togglePlayMode,
+    reorderPlaylist,
     volume, setVolume, isMuted, toggleMute
   } = useMusic();
 
@@ -22,6 +23,10 @@ export default function MusicClient() {
   const [activeTab, setActiveTab] = useState<'lyrics' | 'playlist'>('lyrics');
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // 🌟 歌单手动排序：拖拽（桌面）+ 上下按钮（触屏）
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const isSearching = !!searchQuery.trim();
 
   const [parsedLyrics, setParsedLyrics] = useState<any[]>([]);
 
@@ -242,12 +247,23 @@ export default function MusicClient() {
                       {searchQuery && (<button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-black/10 rounded-full transition-colors"><X size={14} className="text-slate-500" /></button>)}
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-2 md:gap-2.5">
+                      {!isSearching && playlist.length > 1 && (
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-wider text-center">按住右侧手柄拖动可调整播放顺序 · 或用 ↑↓ 微调</p>
+                      )}
                       <AnimatePresence mode='popLayout'>
                         {filteredPlaylist.map((song: any) => {
                           const originalIndex = playlist.findIndex((s: any) => s.id === song.id);
                           const isPlayingThis = (song.id === currentSong.id);
+                          const isDragging = dragIdx === originalIndex;
                           return (
-                            <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} key={song.id} onClick={() => handlePlaySong(originalIndex)} className={`group flex items-center justify-between p-3 md:p-4 rounded-xl md:rounded-2xl cursor-pointer transition-all border ${isPlayingThis ? 'bg-white/60 dark:bg-slate-700/80 shadow-md border-indigo-500/30' : 'border-transparent hover:bg-white/30 dark:hover:bg-slate-700/40'}`}>
+                            <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} key={song.id}
+                              draggable={!isSearching && playlist.length > 1}
+                              onDragStart={(e) => { setDragIdx(originalIndex); if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(originalIndex)); } catch {} } }}
+                              onDragOver={(e) => { if (dragIdx !== null && dragIdx !== originalIndex) e.preventDefault(); }}
+                              onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== originalIndex) reorderPlaylist(dragIdx, originalIndex); setDragIdx(null); }}
+                              onDragEnd={() => setDragIdx(null)}
+                              onClick={() => handlePlaySong(originalIndex)}
+                              className={`group flex items-center justify-between p-3 md:p-4 rounded-xl md:rounded-2xl cursor-pointer transition-all border ${isPlayingThis ? 'bg-white/60 dark:bg-slate-700/80 shadow-md border-indigo-500/30' : 'border-transparent hover:bg-white/30 dark:hover:bg-slate-700/40'} ${isDragging ? 'opacity-40 ring-2 ring-indigo-400' : ''}`}>
                               <div className="flex items-center gap-3 md:gap-4 w-[85%]">
                                 <div className="relative w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-lg md:rounded-xl overflow-hidden shadow-sm">
                                   <img src={song.cover || song.pic} alt="cover" className="w-full h-full object-cover" />
@@ -255,6 +271,15 @@ export default function MusicClient() {
                                 </div>
                                 <div className="flex flex-col truncate"><span className={`text-sm md:text-[15px] font-black truncate ${isPlayingThis ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-200'}`}>{song.title || song.name}</span><span className="text-[10px] md:text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">{song.artist || song.author}</span></div>
                               </div>
+                              {!isSearching && playlist.length > 1 && (
+                                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity md:opacity-40 md:hover:opacity-100">
+                                    <button title="上移" onClick={() => reorderPlaylist(originalIndex, Math.max(0, originalIndex - 1))} disabled={originalIndex === 0} className="p-0.5 text-slate-400 hover:text-indigo-500 disabled:opacity-20 disabled:cursor-not-allowed"><ChevronUp size={13} /></button>
+                                    <button title="下移" onClick={() => reorderPlaylist(originalIndex, Math.min(playlist.length - 1, originalIndex + 1))} disabled={originalIndex === playlist.length - 1} className="p-0.5 text-slate-400 hover:text-indigo-500 disabled:opacity-20 disabled:cursor-not-allowed"><ChevronDown size={13} /></button>
+                                  </div>
+                                  <span draggable={!isSearching} onDragStart={(e) => { setDragIdx(originalIndex); if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(originalIndex)); } catch {} } }} className="cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-indigo-400 transition-colors touch-none p-1"><GripVertical size={14} /></span>
+                                </div>
+                              )}
                             </motion.div>
                           );
                         })}

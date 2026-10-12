@@ -55,6 +55,7 @@ interface MusicContextType {
   prevSong: () => void;
   handleSeek: (e: React.ChangeEvent<HTMLInputElement>) => void;
   playSong: (index: number) => void;
+  reorderPlaylist: (from: number, to: number) => void;
   setVolume: (value: number) => void;
   toggleMute: () => void;
   togglePlayMode: () => void;
@@ -137,8 +138,20 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             lyrics: song.lrc ? parseLrc(song.lrc) : []
           }));
 
+        // 应用本地保存的手动排序（新歌排在末尾）
+        let orderedPlaylist = mergedPlaylist;
+        try {
+          const saved: string[] = JSON.parse(localStorage.getItem('music-playlist-order') || '[]');
+          if (Array.isArray(saved) && saved.length > 0) {
+            const rank = new Map<string, number>(saved.map((id, i) => [id, i]));
+            orderedPlaylist = [...mergedPlaylist].sort((a, b) =>
+              (rank.has(a.id) ? rank.get(a.id)! : 9999) - (rank.has(b.id) ? rank.get(b.id)! : 9999)
+            );
+          }
+        } catch { /* 排序缓存坏了就用默认顺序 */ }
+
         if (isMounted) {
-          if (mergedPlaylist.length > 0) setPlaylist(mergedPlaylist);
+          if (orderedPlaylist.length > 0) setPlaylist(orderedPlaylist);
           else setCurrentLyric("云端链路受阻");
           setIsLoading(false);
         }
@@ -228,6 +241,23 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     if (!isPlaying) setIsPlaying(true); // 保证切歌后自动播放
   };
 
+  // 🌟 手动排序：把第 from 首歌拖到第 to 的位置；当前播放的歌跟着走，顺序记进 localStorage
+  const reorderPlaylist = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= playlist.length || to >= playlist.length) return;
+    const next = [...playlist];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setPlaylist(next);
+    const currentId = playlist[currentIndex]?.id;
+    if (currentId !== undefined) {
+      const newIndex = next.findIndex(s => s.id === currentId);
+      if (newIndex >= 0) setCurrentIndex(newIndex);
+    }
+    try {
+      localStorage.setItem('music-playlist-order', JSON.stringify(next.map(s => s.id)));
+    } catch { /* 存不了就算了，不影响功能 */ }
+  };
+
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       const { currentTime, duration } = audioRef.current;
@@ -285,6 +315,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         volume, isMuted, playMode, // 暴露新状态
         togglePlay, nextSong, prevSong, handleSeek,
         playSong, setVolume, toggleMute, togglePlayMode, // 暴露新方法
+        reorderPlaylist, // 手动排序
         getAnalyser // 频谱分析器
     }}>
       {children}
