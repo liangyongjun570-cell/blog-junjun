@@ -1,4 +1,5 @@
-// 项目数据（建议在后台控制台“项目”页面维护）
+// 🛡️ 本文件由控制台自动生成，请勿手动修改
+
 export type Project = {
   id: string;
   name: string;
