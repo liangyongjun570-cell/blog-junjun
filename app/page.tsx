@@ -180,17 +180,7 @@ export default function Home() {
           <div id="home-content" className="w-full max-w-6xl mx-auto mt-16 sm:mt-20 px-4 sm:px-6 lg:px-10 relative z-10 scroll-mt-24">
             <main className="flex flex-col gap-10 w-full">
 
-              {/* 近期笔记 + 站点动态 + 随想碎片 + 生活回想 */}
-              <HomeShowcase
-                notes={notes}
-                totalPosts={allPosts.length}
-                events={timelineEvents}
-                stats={{ posts: allPosts.length, chatters: chatterCount }}
-                fragments={fragments.slice(0, 12)}
-                albumCards={albumCards}
-              />
-
-              {/* 工具行：音乐播放器 + 天气 + 主题切换 */}
+              {/* 工具行：音乐播放器 + 天气 + 主题切换（置顶） */}
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 w-full">
                 <div className="sm:col-span-2 flex flex-col min-h-[200px]">
                   <CloudPlayer />
@@ -202,6 +192,16 @@ export default function Home() {
                   <ThemeToggleBlock />
                 </div>
               </div>
+
+              {/* 近期笔记 + 站点动态 + 随想碎片 + 生活回想 */}
+              <HomeShowcase
+                notes={notes}
+                totalPosts={allPosts.length}
+                events={timelineEvents}
+                stats={{ posts: allPosts.length, chatters: chatterCount }}
+                fragments={fragments.slice(0, 12)}
+                albumCards={albumCards}
+              />
 
               {/* 底部数据面板 */}
               <div className="w-full mt-2"><SiteDashboard /></div>
