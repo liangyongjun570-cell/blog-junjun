@@ -14,6 +14,11 @@ export default function ThemeToggleBlock() {
         ${isDark ? 'bg-slate-800/40 border-slate-600/50' : 'bg-white/40 border-white/60'}
       `}
     >
+       {/* 🐱 猫咪背景（相拥而眠的猫，夜间模式绝配） */}
+       <div className="absolute inset-0 pointer-events-none">
+         <img src="/images/widget-night.jpg" alt="" className="w-full h-full object-cover" style={{ objectPosition: '62% 30%' }} />
+         <div className={`absolute inset-0 transition-colors duration-500 ${isDark ? 'bg-slate-900/65' : 'bg-white/55'}`}></div>
+       </div>
        {/* 日夜交替动画图标 */}
        <div className="relative w-20 h-20 rounded-full overflow-hidden mb-3 shadow-inner flex-shrink-0">
           <div className={`absolute inset-0 transition-transform duration-700 ${isDark ? '-translate-y-full' : 'translate-y-0'} bg-gradient-to-tr from-sky-300 to-yellow-200`}></div>

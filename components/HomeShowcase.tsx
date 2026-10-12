@@ -130,7 +130,13 @@ export default function HomeShowcase({ notes, totalPosts, events, stats, fragmen
           title="站点动态"
           right={<span className="text-xs sm:text-sm text-slate-400 dark:text-white/40">文章 {stats.posts} · 碎片 {stats.chatters}</span>}
         />
-        <div className={`${glass} rounded-3xl px-4 sm:px-8 py-6 overflow-x-auto ${noBar}`}>
+        <div className={`${glass} rounded-3xl relative overflow-hidden`}>
+          {/* 🌸 站点动态背景（86 蕾娜） */}
+          <div className="absolute inset-0 pointer-events-none">
+            <img src="/images/widget-timeline.jpg" alt="" className="w-full h-full object-cover" style={{ objectPosition: '50% 3%' }} />
+            <div className="absolute inset-0 bg-white/65 dark:bg-slate-900/78 transition-colors duration-700"></div>
+          </div>
+          <div className={`relative px-4 sm:px-8 py-6 overflow-x-auto ${noBar}`}>
           {events.length === 0 ? (
             <div className="py-8 text-center text-sm text-slate-400 dark:text-white/40">暂无动态</div>
           ) : (
@@ -156,6 +162,7 @@ export default function HomeShowcase({ notes, totalPosts, events, stats, fragmen
               </div>
             </div>
           )}
+          </div>
         </div>
       </motion.section>
 

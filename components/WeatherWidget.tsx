@@ -50,6 +50,11 @@ export default function WeatherWidget() {
 
   return (
     <div className="w-full h-full rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl p-6 flex flex-col justify-center transition-all duration-700 hover:scale-[1.02] group relative overflow-hidden">
+      {/* 🐱 猫咪背景（黄色小橘猫） */}
+      <div className="absolute inset-0 pointer-events-none">
+        <img src="/images/widget-weather.jpg" alt="" className="w-full h-full object-cover" style={{ objectPosition: '68% 45%' }} />
+        <div className="absolute inset-0 bg-white/55 dark:bg-slate-900/70 transition-colors duration-700"></div>
+      </div>
       <div className={`absolute -right-6 -top-6 w-32 h-32 blur-3xl rounded-full transition-colors duration-700 ${weather?.isMock ? 'bg-amber-500/20 group-hover:bg-amber-500/40' : 'bg-indigo-500/20 group-hover:bg-indigo-500/40'}`}></div>
       {loading ? (
          <div className="flex flex-col items-center gap-3 text-slate-500 w-full justify-center relative z-10">

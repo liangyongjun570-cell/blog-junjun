@@ -213,6 +213,11 @@ export default function CloudPlayer() {
         ref={cardRef}
         className="h-full w-full rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl p-6 pt-8 flex flex-col justify-between transition-all duration-700 group-hover:scale-[1.02] relative overflow-hidden"
       >
+        {/* 🐱 猫咪背景（被子里的白猫） */}
+        <div className="absolute inset-0 pointer-events-none">
+          <img src="/images/widget-music.jpg" alt="" className="w-full h-full object-cover" style={{ objectPosition: '58% 60%' }} />
+          <div className="absolute inset-0 bg-white/55 dark:bg-slate-900/70 transition-colors duration-700"></div>
+        </div>
         {/* 随低音呼吸的双色光晕 */}
         <div className="absolute -top-20 -right-20 w-48 h-48 bg-indigo-500/25 blur-[50px] rounded-full pointer-events-none" style={{ opacity: 'calc(0.3 + var(--beat, 0) * 0.7)' }}></div>
         <div className="absolute -bottom-24 -left-20 w-48 h-48 bg-pink-500/20 blur-[50px] rounded-full pointer-events-none" style={{ opacity: 'calc(0.2 + var(--beat, 0) * 0.8)' }}></div>
