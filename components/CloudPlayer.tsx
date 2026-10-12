@@ -78,7 +78,8 @@ export default function CloudPlayer() {
           for (let i = 0; i < BAR_COUNT; i++) {
             let sum = 0;
             for (let j = 0; j < step; j++) sum += data[i * step + j] || 0;
-            target[i] = sum / step / 255;
+            // 高频段加权补偿，让整条频谱视觉均衡
+            target[i] = Math.min(1, (sum / step / 255) * (1 + (i / BAR_COUNT) * 2.4));
             energy += target[i];
           }
           // 持续拿不到数据（CORS 被污染等）→ 切换到模拟节拍
@@ -188,32 +189,33 @@ export default function CloudPlayer() {
       `}</style>
 
       {/* 🌟 终极逻辑：在外层 Div 直接绑定 onClick 进行页面跳转 */}
+      {/* 外层只负责点击跳转 + 承载不被裁剪的灵动岛；内层 overflow-hidden 管圆角裁切 */}
+      <div onClick={() => router.push('/music')} className="relative h-full w-full cursor-pointer group">
+      {/* 🌟 灵动岛：顶部胶囊，播放时展开 + 随节拍跳动 */}
+      <div
+        className={`absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center rounded-full bg-slate-900/95 dark:bg-black/90 text-white shadow-lg shadow-black/40 border border-white/10 backdrop-blur transition-all duration-500 ease-out ${isPlaying ? 'pl-3.5 pr-4 py-1.5 gap-2' : 'px-3.5 py-1'}`}
+      >
+        {isPlaying ? (
+          <>
+            <span className="flex items-end gap-[2.5px] h-[14px]">
+              {[0, 1, 2, 3, 4].map(i => (
+                <span key={i} className="island-wave w-[3px] rounded-sm bg-gradient-to-t from-pink-400 to-indigo-400" style={{ animationDelay: `${i * 0.13}s`, animationDuration: `${0.65 + i * 0.08}s` }} />
+              ))}
+            </span>
+            <span className="text-[10px] font-bold tracking-wider truncate max-w-[110px] sm:max-w-[150px]">{currentSong.title}</span>
+          </>
+        ) : (
+          <span className="text-[10px] font-black tracking-[0.25em] text-white/60">♪ MUSIC</span>
+        )}
+      </div>
+
       <div
         ref={cardRef}
-        onClick={() => router.push('/music')}
-        className="h-full w-full rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl p-6 pt-8 flex flex-col justify-between transition-all duration-700 hover:scale-[1.02] relative group overflow-hidden cursor-pointer"
+        className="h-full w-full rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl p-6 pt-8 flex flex-col justify-between transition-all duration-700 group-hover:scale-[1.02] relative overflow-hidden"
       >
         {/* 随低音呼吸的双色光晕 */}
         <div className="absolute -top-20 -right-20 w-48 h-48 bg-indigo-500/25 blur-[50px] rounded-full pointer-events-none" style={{ opacity: 'calc(0.3 + var(--beat, 0) * 0.7)' }}></div>
         <div className="absolute -bottom-24 -left-20 w-48 h-48 bg-pink-500/20 blur-[50px] rounded-full pointer-events-none" style={{ opacity: 'calc(0.2 + var(--beat, 0) * 0.8)' }}></div>
-
-        {/* 🌟 灵动岛：顶部胶囊，播放时展开 + 随节拍跳动 */}
-        <div
-          className={`absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center rounded-full bg-slate-900/95 dark:bg-black/90 text-white shadow-lg shadow-black/40 border border-white/10 backdrop-blur transition-all duration-500 ease-out ${isPlaying ? 'pl-3.5 pr-4 py-1.5 gap-2' : 'px-3.5 py-1'}`}
-        >
-          {isPlaying ? (
-            <>
-              <span className="flex items-end gap-[2.5px] h-[14px]">
-                {[0, 1, 2, 3, 4].map(i => (
-                  <span key={i} className="island-wave w-[3px] rounded-sm bg-gradient-to-t from-pink-400 to-indigo-400" style={{ animationDelay: `${i * 0.13}s`, animationDuration: `${0.65 + i * 0.08}s` }} />
-                ))}
-              </span>
-              <span className="text-[10px] font-bold tracking-wider truncate max-w-[110px] sm:max-w-[150px]">{currentSong.title}</span>
-            </>
-          ) : (
-            <span className="text-[10px] font-black tracking-[0.25em] text-white/60">♪ MUSIC</span>
-          )}
-        </div>
 
         <div className="flex items-center gap-5 relative z-10 mb-4 mt-2">
           {/* 封面：外层随低音脉冲，内层保持旋转 */}
@@ -283,6 +285,7 @@ export default function CloudPlayer() {
             </button>
           </div>
         </div>
+      </div>
       </div>
     </>
   );
