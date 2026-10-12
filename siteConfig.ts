@@ -5,7 +5,7 @@ export const siteConfig = {
   title: "骏 の 工控小站",
   faviconUrl: "/avatar.jpg",
   authorName: "骏",
-  bio: "电气自动化从业者，白天调 PLC，晚上折腾代码和一切会动的东西。",
+  bio: "不管心情多糟糕也要和爱的人好好说话。",
 
   navTitle: "骏",
 
