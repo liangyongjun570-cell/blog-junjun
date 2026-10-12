@@ -19,6 +19,7 @@ import { ToastProvider } from '../components/ToastProvider';
 import LatestPostsCarousel from '../components/LatestPostsCarousel';
 import LatestChatterCarousel from '../components/LatestChatterCarousel';
 import DanmakuBackground from '../components/DanmakuBackground';
+import HeroSection from '../components/HeroSection';
 
 function formatUpdateTime(dateString: string) {
   if (!dateString || dateString === '1970-01-01') return '刚刚更新';
@@ -93,9 +94,10 @@ export default function Home() {
     <ToastProvider>
       <div className="min-h-screen relative pb-10">
         <Navbar />
+        <HeroSection />
         <PageTransition>
           {/* 🌟 调整整体容器的内边距，适应手机端更小的屏幕 */}
-          <div className="w-full max-w-6xl mx-auto mt-24 sm:mt-28 px-4 sm:px-6 lg:px-10 relative z-10">
+          <div id="home-content" className="w-full max-w-6xl mx-auto mt-24 sm:mt-28 px-4 sm:px-6 lg:px-10 relative z-10">
             <SearchBar posts={allPosts} />
 
             <main className="flex flex-col gap-6 w-full mt-6">
