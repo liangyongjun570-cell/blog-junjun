@@ -114,6 +114,12 @@ async function getPostData(slug: string) {
   // ② 再把连续出现的 img 兄弟包进弹性行容器
   contentHtml = contentHtml.replace(/(?:<img[^>]*>\s*){2,}/gi, (m) => `<div class="img-row">${m.trim()}</div>`);
 
+  // 🌟 外部链接（http/https）一律新标签页打开，不让读者离开当前页
+  contentHtml = contentHtml.replace(
+    /<a\s+href="(https?:\/\/[^"]*)"/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer"'
+  );
+
   return {
     slug,
     contentHtml,

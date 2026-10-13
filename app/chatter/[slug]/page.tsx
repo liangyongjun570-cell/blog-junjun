@@ -90,9 +90,15 @@ async function getChatterData(slug: string) {
     .use(rehypeStringify, { allowDangerousHtml: true })
     .process(content);
 
+  // 🌟 外部链接（http/https）一律新标签页打开，不让读者离开当前页
+  const externalHtml = processedContent.toString().replace(
+    /<a\s+href="(https?:\/\/[^"]*)"/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer"'
+  );
+
   return {
     slug,
-    contentHtml: processedContent.toString(),
+    contentHtml: externalHtml,
     title: data.title || '碎片记录',
     date: data.date,
     mood: data.mood,
