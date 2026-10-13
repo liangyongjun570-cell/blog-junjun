@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 订阅者隐私数据，不进仓库
+XHBlogs/data/

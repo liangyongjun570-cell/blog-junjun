@@ -57,14 +57,20 @@ export default function ArticleFooter({ slug, title, tags, prev, next }: Props) 
     setCopyMsg('链接已复制 ✓'); setTimeout(() => setCopyMsg(''), 1800);
   };
 
-  const subscribe = () => {
+  const subscribe = async () => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setSubMsg('请输入有效的邮箱地址'); return; }
     try {
-      const list = JSON.parse(localStorage.getItem('subscriptions') || '[]');
-      if (!list.includes(email)) list.push(email);
-      localStorage.setItem('subscriptions', JSON.stringify(list));
-    } catch {}
-    setSubMsg('订阅成功，更新时会第一时间通知你 ✨'); setEmail('');
+      const r = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const d = await r.json();
+      setSubMsg(d.message || (d.ok ? '订阅成功 ✨' : '订阅失败，稍后再试试'));
+      if (d.ok) setEmail('');
+    } catch {
+      setSubMsg('网络出错了，请稍后再试');
+    }
     setTimeout(() => setSubMsg(''), 3000);
   };
 
