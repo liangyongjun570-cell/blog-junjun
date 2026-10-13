@@ -95,3 +95,14 @@ input[type=range]::-webkit-slider-thumb {
   scrollbar-width: thin;
   scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
 }
+/* ========================================================
+   7. 杂谈卡片特效动画
+   ======================================================== */
+@keyframes shimmer {
+  0% { background-position: 200% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes sweep {
+  0% { left: -60%; }
+  100% { left: 130%; }
+}

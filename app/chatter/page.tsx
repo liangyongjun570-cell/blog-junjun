@@ -12,6 +12,23 @@ export const metadata = {
   description: "日常碎片与灵感记录",
 };
 
+// 剥掉 markdown 符号，输出纯文本预览（**加粗**、# 标题、`代码`、[链接](url) 等）
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^#{1,6}\s+.*$/gm, '')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/^>\s?/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/🔗/g, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+}
+
 export default function ChatterPage() {
   // 注意：这里我们假设你的 md 文件放在根目录的 chatters 文件夹里
   const chattersDirectory = path.join(process.cwd(), 'chatters');
@@ -30,14 +47,24 @@ export default function ChatterPage() {
       const fileContents = fs.readFileSync(path.join(chattersDirectory, fileName), 'utf8');
       const { data, content } = matter(fileContents);
 
+      // 提取正文里的来源链接（🔗 [名称](url)），从预览中剥离
+      let source: { text: string; url: string } | null = null;
+      let body = content;
+      const srcMatch = body.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
+      if (srcMatch) {
+        source = { text: srcMatch[1], url: srcMatch[2] };
+        body = body.replace(srcMatch[0], '');
+      }
+
       return {
         slug,
         title: data.title || '',
-        date: data.date || '未知时间',
+        date: data.date ? String(data.date) : '未知时间',
         tags: data.tags || [],
         mood: data.mood || '',
         cover: data.cover || '',
-        content: content.replace(/^#+ .*\n/m, '') // 去除开头的 markdown 标题以优化截取显示
+        source,
+        content: stripMarkdown(body)
       };
     }).sort((a, b) => (new Date(b.date).getTime() - new Date(a.date).getTime())); // 按时间倒序
   } catch (e) {
