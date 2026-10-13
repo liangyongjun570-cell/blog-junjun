@@ -18,8 +18,11 @@ export default function ChatterBoard({ chatters }: { chatters: Chatter[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTag, setActiveTag] = useState("全部");
 
+  // 📡 科技情报站分区：固定显示四个栏目，避免某天缺稿时分区按钮消失
+  const SECTION_TAGS = ["AI 动态", "Web3 加密艺术", "开源项目", "其他"];
+
   const allTags = useMemo(() => {
-    const tags = new Set<string>();
+    const tags = new Set<string>(SECTION_TAGS);
     chatters.forEach(c => c.tags?.forEach(t => tags.add(t)));
     return ["全部", ...Array.from(tags)];
   }, [chatters]);
