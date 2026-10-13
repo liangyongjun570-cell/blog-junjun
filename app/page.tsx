@@ -93,6 +93,9 @@ export default function Home() {
 
   const chatterCount = allChatters.length;
 
+  // 📡 情报站卡片（news-*.md）只属于杂谈页，不进首页的碎碎念时间线和随想碎片胶片区
+  const musingChatters = allChatters.filter(c => !c.slug.startsWith('news-'));
+
   /* ---------------- 近期笔记 ---------------- */
   const notes: NoteItem[] = allPosts.slice(0, 6).map(p => {
     const d = p.d;
@@ -113,7 +116,7 @@ export default function Home() {
       events.push({ text: `添加了标签 ${tag}`, dateLabel: '', t: p.d.getTime() });
     });
   });
-  allChatters.slice(0, 4).forEach(c => {
+  musingChatters.slice(0, 4).forEach(c => {
     events.push({ text: `更新了碎碎念 ${c.title}`, dateLabel: '', t: c.d.getTime() });
   });
   albums.slice(0, 3).forEach(a => {
@@ -154,8 +157,8 @@ export default function Home() {
     } catch {}
   });
 
-  // ② 碎碎念（封面缺省时已回退正文首图）
-  allChatters.forEach(c => {
+  // ② 碎碎念（封面缺省时已回退正文首图；情报站卡片不进胶片区）
+  musingChatters.forEach(c => {
     fragPool.push({ src: c.cover, dateLabel: fmtMD(c.d), caption: c.title, t: c.d.getTime() });
   });
 
