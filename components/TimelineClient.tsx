@@ -16,6 +16,10 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
   const [viewMode, setViewMode] = useState<'timeline' | 'card'>('timeline');
   const [showScrollTop, setShowScrollTop] = useState(false);
 
+  // 📄 分页：两种视图每页最多 6 篇
+  const PAGE_SIZE = 6;
+  const [page, setPage] = useState(1);
+
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
 
@@ -58,6 +62,71 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
       return selectedTag === 'All' || post.tags?.includes(selectedTag);
     });
   }, [posts, selectedTag]);
+
+  // 📄 分页计算
+  const totalPages = Math.max(1, Math.ceil(timelinePosts.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedPosts = useMemo(() => {
+    return timelinePosts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  }, [timelinePosts, safePage]);
+
+  // 换标签时回到第一页
+  const handleTagChange = (tag: string) => {
+    setSelectedTag(tag);
+    setPage(1);
+  };
+
+  // 翻页：内容滚回顶部
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages) return;
+    setPage(p);
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    if (gridScrollRef.current) {
+      gridScrollRef.current.scrollTop = 0;
+    }
+  };
+
+  // 📄 翻页器
+  const paginationBar = totalPages > 1 && (
+    <div className="flex items-center justify-center gap-4 md:gap-6 mt-12 mb-6 relative z-10">
+      <span className="text-xs md:text-sm text-slate-400 dark:text-slate-500 font-medium">
+        共 {timelinePosts.length} 篇文章
+      </span>
+      <div className="flex items-center gap-3 md:gap-4">
+        <button
+          onClick={() => goToPage(safePage - 1)}
+          disabled={safePage <= 1}
+          aria-label="上一页"
+          className={`w-9 h-9 md:w-11 md:h-11 flex items-center justify-center rounded-full border transition-all duration-300 ${
+            safePage <= 1
+            ? 'border-slate-200/40 dark:border-white/5 text-slate-300 dark:text-slate-600 cursor-not-allowed'
+            : 'border-white/40 dark:border-white/10 bg-white/40 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-indigo-500 hover:text-white hover:border-indigo-500 shadow-md active:scale-90'
+          }`}
+        >
+          <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        </button>
+        <span className="text-sm md:text-base font-black text-slate-600 dark:text-slate-300 font-mono tabular-nums">
+          {safePage} <span className="text-slate-400 dark:text-slate-500">/</span> {totalPages}
+        </span>
+        <button
+          onClick={() => goToPage(safePage + 1)}
+          disabled={safePage >= totalPages}
+          aria-label="下一页"
+          className={`w-9 h-9 md:w-11 md:h-11 flex items-center justify-center rounded-full transition-all duration-300 ${
+            safePage >= totalPages
+            ? 'bg-slate-200/40 dark:bg-white/5 text-slate-300 dark:text-slate-600 cursor-not-allowed'
+            : 'bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/30 hover:shadow-fuchsia-500/50 hover:-translate-y-0.5 active:scale-90'
+          }`}
+        >
+          <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        </button>
+      </div>
+    </div>
+  );
 
   const handleGridScroll = () => {
     if (gridScrollRef.current) {
@@ -145,11 +214,11 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
 
         <div className="w-full flex flex-col md:flex-row justify-between items-center gap-6 bg-white/30 dark:bg-slate-800/30 backdrop-blur-md p-4 rounded-3xl border border-white/20 dark:border-white/5">
           <div className="flex flex-wrap justify-center md:justify-start gap-2 flex-1">
-            <button onClick={() => setSelectedTag('All')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${selectedTag === 'All' ? 'bg-indigo-500 text-white shadow-md' : 'bg-white/50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-white'}`}>
+            <button onClick={() => handleTagChange('All')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${selectedTag === 'All' ? 'bg-indigo-500 text-white shadow-md' : 'bg-white/50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-white'}`}>
               全部档案
             </button>
             {tags.map(tag => (
-              <button key={tag.name} onClick={() => setSelectedTag(tag.name)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${selectedTag === tag.name ? 'bg-indigo-500 text-white shadow-md' : 'bg-white/50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-white'}`}>
+              <button key={tag.name} onClick={() => handleTagChange(tag.name)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${selectedTag === tag.name ? 'bg-indigo-500 text-white shadow-md' : 'bg-white/50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-white'}`}>
                 {tag.name} <span className="opacity-50 ml-1">{tag.count}</span>
               </button>
             ))}
@@ -196,7 +265,7 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
             >
               {/* 🌟 核心魔法 3：强制手机端 grid-cols-2 双列显示，减小 gap */}
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 pt-4 pb-10">
-                {timelinePosts.map((post, idx) => (
+                {pagedPosts.map((post, idx) => (
                   <motion.div key={post.slug} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                     <div className="bg-white/60 dark:bg-slate-800/70 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl md:rounded-3xl overflow-hidden shadow-lg flex flex-col h-full group relative hover:-translate-y-1 transition-transform duration-300">
 
@@ -228,6 +297,8 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
                 ))}
               </div>
             </div>
+
+            {paginationBar}
 
             {/* 火箭按钮 */}
             <AnimatePresence>
@@ -262,7 +333,7 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
 
             <div className="relative z-10 flex flex-col gap-16">
               <AnimatePresence mode='popLayout'>
-                {timelinePosts.map((post, index) => (
+                {pagedPosts.map((post, index) => (
                   <TimelineNode
                     key={post.slug}
                     post={post}
@@ -277,6 +348,8 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
                  </div>
               )}
             </div>
+
+            {paginationBar}
           </motion.div>
         )}
 
