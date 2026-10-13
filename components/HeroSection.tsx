@@ -39,8 +39,15 @@ export default function HeroSection() {
 
     fetch('/api/weather')
       .then(r => r.json())
-      .then((d) => { if (d && d.city) setWeather({ city: d.city, temp: d.temp, text: d.text, isMock: d.isMock }); })
-      .catch(() => setWeather(null));
+      .then((d) => {
+        // /api/weather 返回和风 V7 原始结构：{ code, now: { temp, text, icon, ... } }
+        if (d && d.code === '200' && d.now) {
+          setWeather({ city: '东莞市', temp: parseInt(d.now.temp), text: d.now.text, isMock: false });
+        } else {
+          setWeather({ city: '东莞市', temp: 22, text: '气候模拟', isMock: true });
+        }
+      })
+      .catch(() => setWeather({ city: '东莞市', temp: 22, text: '气候模拟', isMock: true }));
     return () => clearInterval(t);
   }, []);
 
