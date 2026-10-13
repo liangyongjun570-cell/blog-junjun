@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 
 export interface NoteItem { slug: string; title: string; cover: string; dateLabel: string; description: string; }
-export interface EventItem { text: string; dateLabel: string; }
-export interface FragmentItem { src: string; dateLabel: string; caption: string; }
+export interface EventItem { text: string; dateLabel: string; href?: string; }
+export interface FragmentItem { src: string; dateLabel: string; caption: string; href?: string; }
 export interface AlbumCard { title: string; cover: string; description: string; count: number; dateLabel: string; }
 
 interface Props {
@@ -150,12 +150,16 @@ export default function HomeShowcase({ notes, totalPosts, events, stats, fragmen
                     <span className={`absolute left-1/2 w-px h-5 bg-pink-400/50 ${i % 2 ? 'top-1/2' : 'bottom-1/2'}`} />
                     {/* 发光节点 */}
                     <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-pink-400 shadow-[0_0_12px_3px_rgba(244,114,182,0.55)] ring-4 ring-pink-400/15" />
-                    {/* 事件卡：上下交错 */}
+                    {/* 事件卡：上下交错（可点击跳转对应页面） */}
                     <div className={`absolute left-1/2 -translate-x-1/2 w-40 ${i % 2 ? 'top-1/2 mt-6' : 'bottom-1/2 mb-6'}`}>
-                      <div className="rounded-xl border border-pink-200/60 dark:border-pink-300/10 bg-white/70 dark:bg-white/5 backdrop-blur-sm px-3 py-2.5 hover:border-pink-400/60 transition-colors">
+                      <Link
+                        href={e.href || '#'}
+                        aria-label={e.text}
+                        className="block rounded-xl border border-pink-200/60 dark:border-pink-300/10 bg-white/70 dark:bg-white/5 backdrop-blur-sm px-3 py-2.5 hover:border-pink-400/80 hover:bg-pink-50/80 dark:hover:bg-pink-300/10 hover:shadow-lg hover:shadow-pink-300/20 hover:-translate-y-0.5 transition-all cursor-pointer"
+                      >
                         <p className="text-xs leading-relaxed text-slate-700 dark:text-white/80 line-clamp-2">{e.text}</p>
                         <p className="text-[10px] text-pink-400 dark:text-pink-300/80 mt-1.5 font-bold">{e.dateLabel}</p>
-                      </div>
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -188,22 +192,29 @@ export default function HomeShowcase({ notes, totalPosts, events, stats, fragmen
             {fragments.length === 0 && (
               <div className="w-full py-10 text-center text-sm text-white/40">还没有碎片记录</div>
             )}
-            {fragments.map((f, i) => (
-              <div
-                key={i}
-                className={`relative w-48 sm:w-56 flex-shrink-0 rounded-xl overflow-hidden shadow-lg group ${i % 2 ? 'translate-y-2' : '-translate-y-1'}`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={f.src} alt={f.caption} className="w-full h-32 sm:h-36 object-cover transition-transform duration-500 group-hover:scale-110 group-hover:rotate-1" />
-                {f.dateLabel && (
-                  <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/50 text-white/90 text-xs backdrop-blur-sm">{f.dateLabel}</span>
-                )}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent pt-8 pb-2 px-3 flex items-end justify-between gap-2">
-                  <span className="text-white text-xs truncate drop-shadow">{f.caption}</span>
-                  <span className="px-1.5 py-0.5 rounded bg-pink-400/80 text-white text-[10px] flex-shrink-0">碎片</span>
-                </div>
-              </div>
-            ))}
+            {fragments.map((f, i) => {
+              const cardCls = `relative w-48 sm:w-56 flex-shrink-0 rounded-xl overflow-hidden shadow-lg group ${i % 2 ? 'translate-y-2' : '-translate-y-1'}`;
+              const inner = (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={f.src} alt={f.caption} className="w-full h-32 sm:h-36 object-cover transition-transform duration-500 group-hover:scale-110 group-hover:rotate-1" />
+                  {f.dateLabel && (
+                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/50 text-white/90 text-xs backdrop-blur-sm">{f.dateLabel}</span>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent pt-8 pb-2 px-3 flex items-end justify-between gap-2">
+                    <span className="text-white text-xs truncate drop-shadow">{f.caption}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-pink-400/80 text-white text-[10px] flex-shrink-0">碎片</span>
+                  </div>
+                </>
+              );
+              return f.href ? (
+                <Link key={i} href={f.href} aria-label={f.caption} className={`${cardCls} cursor-pointer hover:shadow-pink-400/30 transition-shadow`}>
+                  {inner}
+                </Link>
+              ) : (
+                <div key={i} className={cardCls}>{inner}</div>
+              );
+            })}
           </div>
           <Perforations />
         </div>

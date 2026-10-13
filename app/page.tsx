@@ -109,18 +109,18 @@ export default function Home() {
   });
 
   /* ---------------- 站点动态时间线 ---------------- */
-  const events: { text: string; dateLabel: string; t: number }[] = [];
+  const events: { text: string; dateLabel: string; t: number; href: string }[] = [];
   allPosts.slice(0, 5).forEach(p => {
-    events.push({ text: `发布了文章 ${p.title}`, dateLabel: '', t: p.d.getTime() });
+    events.push({ text: `发布了文章 ${p.title}`, dateLabel: '', t: p.d.getTime(), href: `/posts/${p.slug}` });
     (p.tags || []).slice(0, 3).forEach((tag: string) => {
-      events.push({ text: `添加了标签 ${tag}`, dateLabel: '', t: p.d.getTime() });
+      events.push({ text: `添加了标签 ${tag}`, dateLabel: '', t: p.d.getTime(), href: '/timeline' });
     });
   });
   musingChatters.slice(0, 4).forEach(c => {
-    events.push({ text: `更新了碎碎念 ${c.title}`, dateLabel: '', t: c.d.getTime() });
+    events.push({ text: `更新了碎碎念 ${c.title}`, dateLabel: '', t: c.d.getTime(), href: `/chatter/${c.slug}` });
   });
   albums.slice(0, 3).forEach(a => {
-    events.push({ text: `创建了相册 ${a.title}`, dateLabel: '', t: toDate(a.date).getTime() });
+    events.push({ text: `创建了相册 ${a.title}`, dateLabel: '', t: toDate(a.date).getTime(), href: '/photowall' });
   });
   events.sort((a, b) => b.t - a.t);
   const timelineEvents: EventItem[] = events.slice(0, 8).map(e => {
@@ -128,6 +128,7 @@ export default function Home() {
     return {
       text: e.text,
       dateLabel: isNaN(d.getTime()) ? '' : `${d.getMonth() + 1}月${d.getDate()}日`,
+      href: e.href,
     };
   });
 
@@ -150,7 +151,7 @@ export default function Home() {
             imgs = Array.from(content.matchAll(/!\[[^\]]*\]\(([^)\s"']+)/g)).map(m => m[1]).slice(0, 6);
           }
           imgs.forEach((img, i) => {
-            fragPool.push({ src: img, dateLabel: fmtMD(d), caption: imgs.length > 1 ? `${caption} ${i + 1}/${imgs.length}` : caption, t: d.getTime() });
+            fragPool.push({ src: img, dateLabel: fmtMD(d), caption: imgs.length > 1 ? `${caption} ${i + 1}/${imgs.length}` : caption, t: d.getTime(), href: '/moments' });
           });
         } catch {}
       });
@@ -159,14 +160,14 @@ export default function Home() {
 
   // ② 碎碎念（封面缺省时已回退正文首图；情报站卡片不进胶片区）
   musingChatters.forEach(c => {
-    fragPool.push({ src: c.cover, dateLabel: fmtMD(c.d), caption: c.title, t: c.d.getTime() });
+    fragPool.push({ src: c.cover, dateLabel: fmtMD(c.d), caption: c.title, t: c.d.getTime(), href: `/chatter/${c.slug}` });
   });
 
   // ③ 相册照片
   albums.forEach(a => {
     const d = toDate(a.date);
     (a.photos || []).forEach((ph: any) => {
-      fragPool.push({ src: ph.url, dateLabel: fmtMD(d), caption: ph.caption || a.title || '相册照片', t: d.getTime() });
+      fragPool.push({ src: ph.url, dateLabel: fmtMD(d), caption: ph.caption || a.title || '相册照片', t: d.getTime(), href: '/photowall' });
     });
   });
 
