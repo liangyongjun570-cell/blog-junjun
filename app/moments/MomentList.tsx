@@ -91,6 +91,24 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
     );
   };
 
+  const renderVideos = (videos: string[]) => {
+    if (!videos || videos.length === 0) return null;
+    return (
+      <div className="w-full flex flex-col gap-3 mt-4 md:mt-6">
+        {videos.map((vid, idx) => (
+          <video
+            key={idx}
+            src={vid}
+            controls
+            playsInline
+            preload="metadata"
+            className="w-full max-h-[420px] md:max-h-[520px] rounded-xl md:rounded-2xl border border-slate-200/50 dark:border-white/10 shadow-lg md:shadow-xl bg-black/80"
+          />
+        ))}
+      </div>
+    );
+  };
+
   const renderMomentCard = (moment: any) => (
     <motion.div
       key={moment.id}
@@ -114,6 +132,9 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       <p className="text-slate-800 dark:text-slate-200 text-[14px] md:text-[16px] leading-relaxed whitespace-pre-wrap font-medium break-words">{moment.content}</p>
 
       {renderImages(moment.images)}
+
+      {/* 🌟 视频：支持图片视频混排 */}
+      {renderVideos(moment.videos)}
 
       {/* 🌟 表情反应：点一下 +1，再点取消 */}
       <div className="mt-4 md:mt-6">
