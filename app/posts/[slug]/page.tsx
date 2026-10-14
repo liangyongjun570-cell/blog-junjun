@@ -22,6 +22,7 @@ import ClientSocials from '../../../components/ClientSocials';
 import ClientTOC from '../../../components/ClientTOC';
 import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
+import Reactions from '../../../components/Reactions';
 import SidebarLyric from '../../../components/SidebarLyric';
 import ArticleFooter from '../../../components/ArticleFooter';
 import ArticleAuthorCard from '../../../components/ArticleAuthorCard';
@@ -365,6 +366,11 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
                 prev={prev}
                 next={next}
               />
+
+              {/* 🌟 表情反应：点一下 +1，再点取消 */}
+              <div className="mt-8">
+                <Reactions target={`posts/${resolvedParams.slug}`} />
+              </div>
 
               <div className="mt-8">
                 <Comments />

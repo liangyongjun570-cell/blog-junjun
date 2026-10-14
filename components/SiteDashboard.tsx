@@ -7,6 +7,17 @@ import { siteConfig } from '../siteConfig';
 export default function SiteDashboard() {
   const [timeStr, setTimeStr] = useState('');
   const [uptimeStr, setUptimeStr] = useState('');
+  const [totalViews, setTotalViews] = useState<number | null>(null);
+
+  // 🌟 全站总阅读量（views.json 所有文章求和，存 GitHub 仓库）
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(d => { if (alive && d.ok) setTotalViews(d.totalViews || 0); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   // 🌟 从配置中读取建站时间
   const START_DATE = new Date(siteConfig.buildDate || '2026-03-23T00:00:00').getTime();
@@ -48,6 +59,12 @@ export default function SiteDashboard() {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
           <span>系统已稳定运行：<span className="text-indigo-600 dark:text-indigo-400 font-black">{uptimeStr}</span></span>
+        </div>
+
+        {/* 🌟 全站总阅读量 */}
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></span>
+          <span>全站被看了：<span className="text-pink-600 dark:text-pink-400 font-black tabular-nums">{totalViews === null ? '…' : totalViews.toLocaleString()}</span> 次</span>
         </div>
 
         {/* 技术栈徽章 (🌟 动态映射 siteConfig 里的数组) */}

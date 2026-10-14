@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { MapPin, MessageSquare, Clock, Sparkles, Search, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost } from 'lucide-react';
 import MomentComments from '../../components/MomentComments';
+import Reactions from '../../components/Reactions';
 
 function timeAgo(dateStr: string) {
   const date = new Date(dateStr);
@@ -113,6 +114,11 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       <p className="text-slate-800 dark:text-slate-200 text-[14px] md:text-[16px] leading-relaxed whitespace-pre-wrap font-medium break-words">{moment.content}</p>
 
       {renderImages(moment.images)}
+
+      {/* 🌟 表情反应：点一下 +1，再点取消 */}
+      <div className="mt-4 md:mt-6">
+        <Reactions target={`moments/${moment.id}`} size="sm" />
+      </div>
 
       <div className="mt-5 md:mt-10 flex items-center justify-between">
         <div className="min-w-0 flex-1 pr-2">
