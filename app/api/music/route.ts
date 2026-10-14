@@ -45,8 +45,17 @@ async function resolveDirectUrl(songId: string): Promise<string> {
       signal: AbortSignal.timeout(6000),
     })
     const loc = res.headers.get('location')
-    const finalUrl =
+    let finalUrl =
       loc && loc.startsWith('http') ? loc.replace(/^http:\/\//, 'https://') : outerUrl
+    // 🌟 关键修复：服务器在海外（Vercel）时网易云会把外链 302 到 /404（区域限制）。
+    // 此时不能把死链 404 返回给前端，改回外链原 URL，让访问者浏览器自行 302
+    //（浏览器在国内，能拿到真实 CDN 直链，播放不受影响，只是频谱拿不到 CORS 数据）
+    if (/music\.163\.com\/404/.test(finalUrl)) {
+      finalUrl = outerUrl
+      // 区域限制是长期的，缓存短一点，避免把无效解析结果长期钉死
+      directUrlCache.set(songId, { url: finalUrl, expires: Date.now() + 60 * 1000 })
+      return finalUrl
+    }
     directUrlCache.set(songId, { url: finalUrl, expires: Date.now() + DIRECT_URL_TTL })
     return finalUrl
   } catch {
