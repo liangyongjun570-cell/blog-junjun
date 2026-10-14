@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * 🌟 打赏盒子：文章底部"请作者喝杯奶茶"按钮 → 弹出微信/支付宝收款码
  * 二维码图片路径：/reward-wechat.jpg 与 /reward-alipay.jpg（放到 public/ 即可生效）
  * 图片不存在时自动显示占位提示
+ *
+ * ⚠️ 弹窗必须用 Portal 挂到 body：文章外层 PageTransition 的 framer-motion
+ *    transform 会劫持 fixed 定位（弹窗被钉在文章容器里，要滚半天才能看到）
  */
 
 function QRSlot({ src, label }: { src: string; label: string }) {
@@ -41,13 +45,13 @@ export default function RewardBox() {
         </button>
       </div>
 
-      {open && (
+      {open && createPortal(
         <div
           className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setOpen(false)}
         >
           <div
-            className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl border border-white/20 max-w-md w-full relative"
+            className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl border border-white/20 max-w-md w-full relative max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -64,7 +68,8 @@ export default function RewardBox() {
               <QRSlot src="/reward-alipay.jpg" label="支付宝" />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
