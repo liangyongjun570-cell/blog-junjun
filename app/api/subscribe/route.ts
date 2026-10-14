@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { readJson, writeJson } from '../../../lib/dataStore';
 
-// 订阅名单统一落在这个文件（已在 .gitignore 排除，避免隐私进仓库）
-// 控制台的「订阅名单」页面读的是同一份
-const FILE = path.join(process.cwd(), 'data', 'subscribers.json');
+// 订阅名单：Vercel 上存 GitHub 私有仓库（只读 FS 落不了盘），本地开发落 data/ 文件
+// 控制台的「📬 订阅」管理页读写的是同一份
+
+type Sub = { email: string; date: string };
 
 export async function POST(req: Request) {
   try {
@@ -13,15 +13,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: '请输入有效的邮箱地址' }, { status: 400 });
     }
 
-    await fs.mkdir(path.dirname(FILE), { recursive: true });
-    let list: { email: string; date: string }[] = [];
-    try { list = JSON.parse(await fs.readFile(FILE, 'utf8')); } catch {}
+    const list = await readJson<Sub[]>('subscribers.json', []);
+    const clean = (Array.isArray(list) ? list : []).filter(s => s && typeof s.email === 'string');
 
-    if (list.some(s => s.email === email)) {
+    if (clean.some(s => s.email === email)) {
       return NextResponse.json({ ok: true, message: '这个邮箱已经订阅过啦～' });
     }
-    list.push({ email, date: new Date().toISOString().slice(0, 10) });
-    await fs.writeFile(FILE, JSON.stringify(list, null, 2), 'utf8');
+    clean.push({ email, date: new Date().toISOString().slice(0, 10) });
+    const saved = await writeJson('subscribers.json', clean);
+
+    if (!saved.remote && !saved.local) {
+      return NextResponse.json({ ok: false, message: '订阅通道暂时不可用，稍后再试试' }, { status: 500 });
+    }
     return NextResponse.json({ ok: true, message: '订阅成功，更新时会第一时间通知你 ✨' });
   } catch {
     return NextResponse.json({ ok: false, message: '订阅通道暂时不可用，稍后再试试' }, { status: 500 });

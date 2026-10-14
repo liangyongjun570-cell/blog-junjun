@@ -42,3 +42,8 @@ next-env.d.ts
 
 # 订阅者隐私数据，不进仓库
 XHBlogs/data/
+../.deploy-token.txt
+
+# 运行时数据(已迁移 GitHub 私有仓库,本地仅为开发缓存)
+data/subscribers.json
+data/views.json

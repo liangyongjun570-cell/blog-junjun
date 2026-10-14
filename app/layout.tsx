@@ -2,6 +2,7 @@ import 'katex/dist/katex.min.css';
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Serif_SC } from "next/font/google";
 import "./globals.css";
+import Analytics from "../components/Analytics";
 import { ThemeProvider } from "../components/ThemeProvider";
 import BackgroundEffects from "../components/BackgroundEffects";
 import { MusicProvider } from "../components/MusicProvider";
@@ -27,8 +28,25 @@ const notoSerif = Noto_Serif_SC({
 });
 
 export const metadata: Metadata = {
-  title: siteConfig.title,
+  metadataBase: new URL(siteConfig.siteUrl || "https://www.junjun.site"),
+  title: {
+    default: siteConfig.title,
+    template: `%s | ${siteConfig.title}`,
+  },
   description: siteConfig.bio,
+  authors: [{ name: siteConfig.authorName }],
+  openGraph: {
+    type: "website",
+    locale: "zh_CN",
+    siteName: siteConfig.title,
+    title: siteConfig.title,
+    description: siteConfig.bio,
+    images: [siteConfig.avatarUrl],
+  },
+  alternates: {
+    canonical: "/",
+    types: { "application/rss+xml": "/feed.xml" },
+  },
   icons: {
     icon: siteConfig.faviconUrl,
     apple: siteConfig.faviconUrl,
@@ -133,6 +151,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </div>
 
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );

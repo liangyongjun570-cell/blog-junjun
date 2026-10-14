@@ -3,6 +3,8 @@
 export const siteConfig = {
   // 1. 网站标题与博主信息
   title: "骏 の 工控小站",
+  // 🌟 站点主域名（sitemap/RSS/SEO canonical 用）
+  siteUrl: "https://www.junjun.site",
   faviconUrl: "/avatar.jpg",
   authorName: "骏",
   bio: "不管心情多糟糕也要和爱的人好好说话。",
