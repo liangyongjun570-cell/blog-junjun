@@ -14,6 +14,7 @@ import GlobalToolbox from "../components/GlobalToolbox";
 import SplashScreen from "../components/SplashScreen";
 import CyberCat from '../components/CyberCat';
 import DanmakuBackground from '../components/DanmakuBackground';
+import PWARegister from '../components/PWARegister';
 
 import MobileBackButton from '../components/MobileBackButton';
 
@@ -151,6 +152,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </div>
 
         </ThemeProvider>
+        <PWARegister />
         <Analytics />
       </body>
     </html>

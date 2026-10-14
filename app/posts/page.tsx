@@ -4,6 +4,7 @@ import matter from 'gray-matter';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import PostsArchiveClient from './PostsArchiveClient';
+import PostHeatmap from '../../components/PostHeatmap';
 import { siteConfig } from '../../siteConfig';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,28 @@ export default function PostsArchivePage() {
 
   const totalCount = allPosts.length;
 
+  // 🌟 热力图数据：文章 + 杂谈按日期聚合
+  const heatmapData: { date: string; count: number }[] = [];
+  const dayMap = new Map<string, number>();
+  for (const p of allPosts) {
+    const key = p.dateLabel || '';
+    if (key) dayMap.set(key, (dayMap.get(key) || 0) + 1);
+  }
+  try {
+    const chattersDirectory = path.join(process.cwd(), 'chatters');
+    if (fs.existsSync(chattersDirectory)) {
+      for (const f of fs.readdirSync(chattersDirectory).filter(n => n.endsWith('.md'))) {
+        const { data } = matter(fs.readFileSync(path.join(chattersDirectory, f), 'utf8'));
+        const d = toDate(data.date || '1970-01-01');
+        if (d.getTime() > 0) {
+          const key = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+          dayMap.set(key, (dayMap.get(key) || 0) + 1);
+        }
+      }
+    }
+  } catch (e) {}
+  for (const [date, count] of dayMap) heatmapData.push({ date, count });
+
   return (
     <div className="min-h-screen relative pb-10">
       <Navbar />
@@ -63,6 +86,11 @@ export default function PostsArchivePage() {
               共 {totalCount} 篇 · 字字皆心血，篇篇是生活
             </p>
           </header>
+
+          {/* 🌟 发文热力图 */}
+          <div className="mb-8">
+            <PostHeatmap data={heatmapData} />
+          </div>
 
           <PostsArchiveClient posts={allPosts.map(({ d, ...p }: any) => p)} />
         </div>

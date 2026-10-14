@@ -9,6 +9,7 @@ import CloudPlayer from '../components/CloudPlayer';
 import ThemeToggleBlock from '../components/ThemeToggleBlock';
 import WeatherWidget from '../components/WeatherWidget';
 import SiteDashboard from '../components/SiteDashboard';
+import OneSentence from '../components/OneSentence';
 import { albums } from '../data/albums';
 import { ToastProvider } from '../components/ToastProvider';
 import HeroSection from '../components/HeroSection';
@@ -232,6 +233,9 @@ export default function Home() {
                 fragments={fragments.slice(0, 12)}
                 albumCards={albumCards}
               />
+
+              {/* 🌟 一言：随机句子 */}
+              <div className="w-full mt-2"><OneSentence /></div>
 
               {/* 底部数据面板 */}
               <div className="w-full mt-2"><SiteDashboard /></div>

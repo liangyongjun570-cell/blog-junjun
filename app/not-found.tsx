@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import CatCatchGame from '../components/CatCatchGame';
 
 export default function NotFound() {
   return (
@@ -26,6 +27,9 @@ export default function NotFound() {
           看看文章
         </Link>
       </div>
+
+      {/* 🌟 404 彩蛋：猫猫接小鱼 */}
+      <CatCatchGame />
     </div>
   );
 }

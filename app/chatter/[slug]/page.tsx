@@ -24,6 +24,7 @@ import SidebarLyric from '../../../components/SidebarLyric';
 import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
 import Reactions from '../../../components/Reactions';
+import MermaidRenderer from '../../../components/MermaidRenderer';
 
 export async function generateStaticParams() {
   const chattersDirectory = path.join(process.cwd(), 'chatters');
@@ -285,6 +286,9 @@ export default async function ChatterDetail({ params }: { params: Promise<{ slug
                   dangerouslySetInnerHTML={{ __html: chatterData.contentHtml }}
                 />
               </div>
+
+              {/* 🌟 Mermaid 图表渲染 */}
+              <MermaidRenderer />
 
               {/* 🌟 表情反应：点一下 +1，再点取消 */}
               <div className="mt-10 md:mt-12">
