@@ -12,6 +12,9 @@ function pickRandom<T>(arr: T[]): T | null {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// 🌟 必须 force-dynamic：无参数 GET 会被 Next 构建时静态化，导致"手气不错"永远同一篇
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const items: { type: string; slug: string; title: string }[] = [];

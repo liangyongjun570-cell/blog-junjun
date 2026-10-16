@@ -5,6 +5,10 @@ import { NextResponse } from 'next/server';
 //    - QWEATHER_KEY 为 JWT(eyJ 开头)→ Authorization: Bearer
 //    - QWEATHER_KEY 为 API Key(32 位十六进制等)→ X-QW-Api-Key(和风 2024+ 控制台默认创建的类型)
 // 🌟 专属 API Host 通过 QWEATHER_HOST 配置(新账号必需,控制台-设置页获取)
+
+// 🌟 必须 force-dynamic：无参数 GET 会被 Next 构建时静态化，导致天气永远停在部署时刻
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const token = (process.env.QWEATHER_KEY || '').trim();
   const locationId = "101281601"; // 广东 东莞
