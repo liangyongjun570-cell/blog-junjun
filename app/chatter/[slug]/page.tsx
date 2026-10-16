@@ -25,6 +25,7 @@ import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
 import Reactions from '../../../components/Reactions';
 import MermaidRenderer from '../../../components/MermaidRenderer';
+import PostViews from '../../../components/PostViews';
 
 export async function generateStaticParams() {
   const chattersDirectory = path.join(process.cwd(), 'chatters');
@@ -176,6 +177,12 @@ export default async function ChatterDetail({ params }: { params: Promise<{ slug
                   <div className="flex items-center gap-1.5 md:gap-2 text-indigo-700 dark:text-indigo-400 font-bold bg-indigo-500/5 dark:bg-indigo-400/10 px-3 md:px-4 py-1.5 md:py-2 rounded-2xl text-xs md:text-sm border border-indigo-500/10">
                     <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     {chatterData.date}
+                  </div>
+
+                  {/* 🌟 全员实时访问量（每次访问 +1） */}
+                  <div className="flex items-center gap-1.5 md:gap-2 text-sky-700 dark:text-sky-400 font-bold bg-sky-500/5 dark:bg-sky-400/10 px-3 md:px-4 py-1.5 md:py-2 rounded-2xl text-xs md:text-sm border border-sky-500/10">
+                    <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    <PostViews slug={chatterData.slug} />
                   </div>
 
                   {chatterData.mood && (

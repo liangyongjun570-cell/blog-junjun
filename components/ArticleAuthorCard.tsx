@@ -5,15 +5,16 @@ import { siteConfig } from '../siteConfig';
 import ClientSocials from './ClientSocials';
 
 export default function ArticleAuthorCard({ postsCount }: { postsCount: number }) {
-  const [visits, setVisits] = useState<number>(0);
+  const [visits, setVisits] = useState<number | null>(null);
 
+  // 🌟 全站真实访问总和：文章+杂谈+说说+照片墙等所有页面的来访计数求和（GitHub 仓库实时数据）
   useEffect(() => {
-    try {
-      const key = 'site-visit-count';
-      const next = (parseInt(localStorage.getItem(key) || '0', 10) || 0) + 1;
-      localStorage.setItem(key, String(next));
-      setVisits(next);
-    } catch { setVisits(1); }
+    let alive = true;
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(d => { if (alive && d.ok) setVisits(d.totalViews || 0); })
+      .catch(() => {});
+    return () => { alive = false; };
   }, []);
 
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
@@ -36,8 +37,8 @@ export default function ArticleAuthorCard({ postsCount }: { postsCount: number }
         </div>
         <span className="w-px h-7 bg-slate-200 dark:bg-white/10" />
         <div>
-          <p className="text-lg font-black text-pink-500 dark:text-pink-300 leading-none">{fmt(visits)}</p>
-          <p className="text-[10px] text-slate-400 dark:text-white/40 mt-1">访问</p>
+          <p className="text-lg font-black text-pink-500 dark:text-pink-300 leading-none">{visits === null ? '…' : fmt(visits)}</p>
+          <p className="text-[10px] text-slate-400 dark:text-white/40 mt-1">全站访问</p>
         </div>
       </div>
       <div className="mt-4"><ClientSocials /></div>
