@@ -14,12 +14,12 @@ interface Props {
 }
 
 const EMOJIS = [
-  { icon: '👍', label: '点赞' },
-  { icon: '👎', label: '踩' },
-  { icon: '😄', label: '开心' },
-  { icon: '🎉', label: '庆祝' },
-  { icon: '💖', label: '喜欢' },
-  { icon: '😲', label: '惊叹' },
+  { icon: '👍', label: '点赞', key: 'like' },
+  { icon: '👎', label: '踩', key: 'dislike' },
+  { icon: '😄', label: '开心', key: 'happy' },
+  { icon: '🎉', label: '庆祝', key: 'celebrate' },
+  { icon: '💖', label: '喜欢', key: 'love' },
+  { icon: '😲', label: '惊叹', key: 'wow' },
 ];
 
 export default function ArticleFooter({ slug, title, tags, prev, next }: Props) {
@@ -30,26 +30,54 @@ export default function ArticleFooter({ slug, title, tags, prev, next }: Props) 
   const [copyMsg, setCopyMsg] = useState('');
   const [pageUrl, setPageUrl] = useState('');
 
+  // 🌟 全员实时累计：计数存服务端 GitHub 仓库（/api/reactions），所有访客共享同一份数字
+  // mine 只记录本机点过哪个（localStorage），用于高亮和取消
   useEffect(() => {
     setPageUrl(window.location.href);
-    try {
-      const saved = JSON.parse(localStorage.getItem(`post-reactions-${slug}`) || '{}');
-      setCounts(saved.counts || {});
-      setMine(saved.mine || null);
-    } catch {}
+    try { setMine(JSON.parse(localStorage.getItem(`post-reactions-${slug}`) || 'null').mine || null); } catch {}
+    let alive = true;
+    fetch(`/api/reactions?target=${encodeURIComponent(`posts/${slug}`)}`)
+      .then(r => r.json())
+      .then(d => { if (alive && d.ok && d.reactions) setCounts(d.reactions); })
+      .catch(() => {});
+    return () => { alive = false; };
   }, [slug]);
 
-  const persist = (c: Record<string, number>, m: string | null) => {
-    setCounts(c); setMine(m);
-    try { localStorage.setItem(`post-reactions-${slug}`, JSON.stringify({ counts: c, mine: m })); } catch {}
+  // 服务端结算：delta 组合（单选切换 = 旧的 -1 + 新的 +1）
+  const pushDelta = async (key: string, delta: number) => {
+    try {
+      const res = await fetch('/api/reactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: `posts/${slug}`, emoji: key, delta }),
+      });
+      const d = await res.json();
+      if (d.ok && d.reactions) setCounts(d.reactions); // 以服务端返回为准
+    } catch { /* 网络失败保留乐观值 */ }
   };
 
-  const react = (label: string) => {
+  const react = (emo: { label: string; key: string }) => {
+    // 乐观更新（显示立刻响应）
     const c = { ...counts };
-    if (mine === label) { c[label] = Math.max((c[label] || 1) - 1, 0); persist(c, null); return; }
-    if (mine) c[mine] = Math.max((c[mine] || 1) - 1, 0);
-    c[label] = (c[label] || 0) + 1;
-    persist(c, label);
+    let nextMine: string | null = emo.label;
+    if (mine === emo.label) {
+      c[emo.key] = Math.max((c[emo.key] || 1) - 1, 0);
+      nextMine = null;
+      pushDelta(emo.key, -1);
+    } else {
+      if (mine) {
+        const oldKey = EMOJIS.find(e => e.label === mine)?.key;
+        if (oldKey) {
+          c[oldKey] = Math.max((c[oldKey] || 1) - 1, 0);
+          pushDelta(oldKey, -1);
+        }
+      }
+      c[emo.key] = (c[emo.key] || 0) + 1;
+      pushDelta(emo.key, 1);
+    }
+    setCounts(c);
+    setMine(nextMine);
+    try { localStorage.setItem(`post-reactions-${slug}`, JSON.stringify({ mine: nextMine })); } catch {}
   };
 
   const copyLink = async () => {
@@ -86,7 +114,7 @@ export default function ArticleFooter({ slug, title, tags, prev, next }: Props) 
           {EMOJIS.map(e => {
             const active = mine === e.label;
             return (
-              <button key={e.label} onClick={() => react(e.label)} className="relative group flex flex-col items-center gap-1.5" aria-label={e.label}>
+              <button key={e.label} onClick={() => react(e)} className="relative group flex flex-col items-center gap-1.5" aria-label={e.label}>
                 <span className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl sm:text-3xl transition-all duration-300 border ${active ? 'bg-pink-500/20 border-pink-400 shadow-[0_0_16px_rgba(244,114,182,0.5)] scale-110' : `${glass} group-hover:border-pink-300 group-hover:scale-110 group-hover:-translate-y-1`}`}>
                   {e.icon}
                   {(counts[e.label] || 0) > 0 && (

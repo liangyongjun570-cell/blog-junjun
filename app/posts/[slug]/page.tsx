@@ -22,7 +22,6 @@ import ClientSocials from '../../../components/ClientSocials';
 import ClientTOC from '../../../components/ClientTOC';
 import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
-import Reactions from '../../../components/Reactions';
 import MermaidRenderer from '../../../components/MermaidRenderer';
 import RewardBox from '../../../components/RewardBox';
 import SidebarLyric from '../../../components/SidebarLyric';
@@ -372,10 +371,7 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
               {/* 🌟 Mermaid 图表渲染（```mermaid 代码块 → 流程图/时序图） */}
               <MermaidRenderer />
 
-              {/* 🌟 表情反应：点一下 +1，再点取消 */}
-              <div className="mt-8">
-                <Reactions target={`posts/${resolvedParams.slug}`} />
-              </div>
+              {/* 🌟 表情评价统一在 ArticleFooter（全员实时累计，走 /api/reactions） */}
 
               {/* 🌟 打赏盒子 */}
               <RewardBox />

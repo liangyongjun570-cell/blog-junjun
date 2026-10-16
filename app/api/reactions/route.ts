@@ -12,7 +12,9 @@ import { readJson, writeJson } from '../../../lib/dataStore';
 type ReactionsMap = Record<string, Record<string, number>>;
 
 // 允许的表情白名单（防乱写 key）
-const EMOJI_KEYS = ['like', 'heart', 'laugh', 'wow', 'party'];
+// like/heart/laugh/wow/party = 药丸式 Reactions 组件
+// dislike/happy/celebrate/love = ArticleFooter 大表情评价（点赞/踩/开心/庆祝/喜欢/惊叹）
+const EMOJI_KEYS = ['like', 'heart', 'laugh', 'wow', 'party', 'dislike', 'happy', 'celebrate', 'love'];
 // target 允许字母数字、下划线、连字符、斜杠（moments/<id>、posts/<slug>）
 const TARGET_RE = /^[a-zA-Z0-9_/-]+$/;
 
