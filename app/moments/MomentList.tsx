@@ -5,6 +5,7 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { MapPin, MessageSquare, Clock, Sparkles, Search, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost } from 'lucide-react';
 import MomentComments from '../../components/MomentComments';
 import Reactions from '../../components/Reactions';
+import PostViews from '../../components/PostViews';
 
 function timeAgo(dateStr: string) {
   const date = new Date(dateStr);
