@@ -166,6 +166,47 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     return () => { isMounted = false; };
   }, []);
 
+  // 🌟 浏览器端解析外链：网易云 outer/url 302 的 http:// CDN 会被 HTTPS 页面
+  // 的混合内容策略静默拦截（服务端在海外又拿不到真链）。改为在访问者浏览器
+  // 里 fetch（cors）→ 302 自动升级 https → blob 本地流 → 任何浏览器都能播
+  const OUTER_SHELL_RE = /music\.163\.com\/song\/media\/outer\/url/;
+  const [playableSrc, setPlayableSrc] = useState('');
+  const blobUrlCacheRef = useRef<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    const song = playlist[currentIndex];
+    if (!song) { setPlayableSrc(''); return; }
+    const src = song.src;
+    const cached = blobUrlCacheRef.current.get(src);
+    if (cached) { setPlayableSrc(cached); return; }
+    if (!OUTER_SHELL_RE.test(src)) { setPlayableSrc(src); return; }
+    setPlayableSrc('');
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(src, { mode: 'cors' });
+        if (!res.ok) throw new Error(String(res.status));
+        const blob = await res.blob();
+        if (blob.size < 10000) throw new Error('dead link placeholder');
+        const blobUrl = URL.createObjectURL(blob);
+        blobUrlCacheRef.current.set(src, blobUrl);
+        if (!cancelled) setPlayableSrc(blobUrl);
+      } catch {
+        // 兜底：拿不到 blob 就让 audio 直接播外链（部分浏览器可自动升级重定向）
+        if (!cancelled) setPlayableSrc(src);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentIndex, playlist.length]);
+
+  // blob 就绪后若处于播放状态则自动起播
+  useEffect(() => {
+    if (playableSrc && isPlaying && audioRef.current) {
+      const p = audioRef.current.play();
+      if (p !== undefined) p.catch(() => setIsPlaying(false));
+    }
+  }, [playableSrc]);
+
   useEffect(() => {
     if (playlist.length === 0) return;
     let isMounted = true;
@@ -197,7 +238,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     if (isPlaying && audioRef.current) {
       const playPromise = audioRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => setIsPlaying(false));
+        // 切歌瞬间 src 可能还没解析好，失败静默，等 playableSrc 就绪后自动起播
+        playPromise.catch(() => { /* 由 playableSrc 就绪 effect 或 onError 兜底 */ });
       }
     }
     return () => { isMounted = false; };
@@ -212,9 +254,16 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
   const togglePlay = () => {
     if (audioRef.current) {
-      if (isPlaying) audioRef.current.pause();
-      else audioRef.current.play().catch(() => setIsPlaying(false));
-      setIsPlaying(!isPlaying);
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        // 先置播放态：若外链还在浏览器端解析（blob 未就绪），起播由
+        // playableSrc 就绪后的 effect 自动补上；就绪时这里直接播
+        setIsPlaying(true);
+        const p = audioRef.current.play();
+        if (p !== undefined) p.catch(() => { /* src 未就绪，等解析完成自动起播 */ });
+      }
     }
   };
 
@@ -322,12 +371,13 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       {currentSong && (
         <audio
           ref={audioRef}
-          src={currentSong.src}
+          src={playableSrc || undefined}
           // 直链 CDN 带 CORS 头才开跨域，外链回退时不开（否则会加载失败）
-          crossOrigin={isCorsSafeSrc(currentSong.src) ? 'anonymous' : undefined}
+          crossOrigin={isCorsSafeSrc(playableSrc) ? 'anonymous' : undefined}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded} // 使用我们重写的结束处理
           onLoadedMetadata={handleTimeUpdate}
+          onError={() => setIsPlaying(false)} // 加载失败（网络断等）回位播放态
         />
       )}
     </MusicContext.Provider>
